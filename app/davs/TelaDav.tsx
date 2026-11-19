@@ -488,11 +488,11 @@ export default function TelaDav({ tipo }: { tipo: Tipo }) {
 
             <SecaoCrm titulo="Observações">
               <GradeCampos>
-                <Campo rotulo="Observações internas" span={2} dica="Não vão para a nota">
-                  <textarea rows={3} value={form.observacoes} onChange={(e) => muda('observacoes', e.target.value)} className={INPUT_CLASS} />
-                </Campo>
                 <Campo rotulo="Informações complementares" span={2} dica="Vão para a nota, depois do texto da natureza">
                   <textarea rows={3} value={form.informacoes_complementares} onChange={(e) => muda('informacoes_complementares', e.target.value)} className={INPUT_CLASS} />
+                </Campo>
+                <Campo rotulo="Observações internas" span={2} dica="Não vão para a nota">
+                  <textarea rows={3} value={form.observacoes} onChange={(e) => muda('observacoes', e.target.value)} className={INPUT_CLASS} />
                 </Campo>
               </GradeCampos>
             </SecaoCrm>
