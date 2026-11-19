@@ -3,15 +3,18 @@ import React, { useLayoutEffect, useState } from 'react';
 import { usePathname, useRouter } from '@/lib/nav';
 import Link from '@/lib/link';
 import {
-  FileText, ClipboardList, Receipt, ShoppingBag, Scale,
+  FileText, ClipboardList, Receipt, ShoppingBag, Scale, FileCheck2, ExternalLink,
   LogOut, Menu, X, User, Sun, Moon, ChevronLeft, ChevronRight, ShoppingCart, type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { fecharNoMaster } from '@/lib/origemMaster';
+import { AvisoErro } from '@/components/AvisoErro';
+import { api } from '@/lib/api';
 
 const CHAVE_RECOLHIDO = 'vendas_menu_recolhido';
 
-interface Item { name: string; icon: LucideIcon; href: string }
+/** href = tela do próprio app; externo = rota da API que devolve { url } de outro app, aberto numa aba nova */
+type Item = { name: string; icon: LucideIcon } & ({ href: string; externo?: never } | { externo: string; href?: never });
 
 // Mesmo desenho do crmWeb: grupos com título e opções soltas
 const GRUPOS: { titulo: string; itens: Item[] }[] = [
@@ -27,6 +30,10 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
   {
     titulo: 'Cadastros',
     itens: [{ name: 'Naturezas de operação', icon: Scale, href: '/naturezas' }],
+  },
+  {
+    titulo: 'Fiscal',
+    itens: [{ name: 'NFe', icon: FileCheck2, externo: '/api/nfe-link' }],
   },
 ];
 
@@ -44,9 +51,25 @@ export default function Sidebar({ userName }: SidebarProps) {
       return false;
     }
   });
+  const [erro, setErro] = useState('');
   const router = useRouter();
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
+
+  /** Abre outro app já logado (aba aberta no clique, para o navegador não bloquear) */
+  const abrirExterno = async (rotaApi: string) => {
+    setMobileAberto(false);
+    const aba = window.open('', '_blank');
+    if (aba) aba.opener = null;
+    try {
+      const { url } = await api<{ url: string }>(rotaApi);
+      if (aba) aba.location.href = url;
+      else if (!window.open(url, '_blank', 'noopener')) setErro('O navegador bloqueou a nova aba: libere as janelas pop-up deste endereço.');
+    } catch (e: any) {
+      aba?.close();
+      setErro(e.message);
+    }
+  };
 
   // As páginas usam --larg-menu como margem esquerda
   useLayoutEffect(() => {
@@ -102,28 +125,31 @@ export default function Sidebar({ userName }: SidebarProps) {
             ) : (
               <div className="px-4 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-blue-500 dark:text-blue-400">{g.titulo}</div>
             )}
-            {g.itens.map(({ name, icon: Icon, href }) => {
-              const ativo = pathname.startsWith(href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={() => setMobileAberto(false)}
-                  title={rec ? name : undefined}
-                  className={`relative w-full flex items-center ${rec ? 'justify-center' : 'pl-4 pr-9'} py-[11px] text-left transition-colors group border-l-2 ${
-                    ativo
-                      ? 'border-blue-600 bg-blue-50 text-blue-700 font-semibold dark:border-blue-400 dark:bg-blue-950/40 dark:text-blue-300'
-                      : 'border-transparent text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-300 dark:hover:bg-stone-800/70 dark:hover:text-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Icon
-                      className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
-                        ativo ? 'text-blue-600 dark:text-blue-300' : 'text-stone-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
-                      }`}
-                    />
-                    {!rec && <div className="text-xs truncate">{name}</div>}
-                  </div>
+            {g.itens.map(({ name, icon: Icon, href, externo }) => {
+              const ativo = !!href && pathname.startsWith(href);
+              const classe = `relative w-full flex items-center ${rec ? 'justify-center' : 'pl-4 pr-9'} py-[11px] text-left transition-colors group border-l-2 cursor-pointer ${
+                ativo
+                  ? 'border-blue-600 bg-blue-50 text-blue-700 font-semibold dark:border-blue-400 dark:bg-blue-950/40 dark:text-blue-300'
+                  : 'border-transparent text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-300 dark:hover:bg-stone-800/70 dark:hover:text-white'
+              }`;
+              const miolo = (
+                <div className="flex items-center gap-3 min-w-0">
+                  <Icon
+                    className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
+                      ativo ? 'text-blue-600 dark:text-blue-300' : 'text-stone-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
+                    }`}
+                  />
+                  {!rec && <div className="text-xs truncate">{name}</div>}
+                </div>
+              );
+              return externo ? (
+                <button key={externo} type="button" onClick={() => abrirExterno(externo)} title={name} data-dica-desc="Abre numa nova aba" className={classe}>
+                  {miolo}
+                  {!rec && <ExternalLink className="absolute right-4 w-3 h-3 text-stone-300 dark:text-stone-600 group-hover:text-blue-500" />}
+                </button>
+              ) : (
+                <Link key={href} href={href!} onClick={() => setMobileAberto(false)} title={rec ? name : undefined} className={classe}>
+                  {miolo}
                 </Link>
               );
             })}
@@ -193,6 +219,8 @@ export default function Sidebar({ userName }: SidebarProps) {
           <div className="relative flex-1 flex flex-col max-w-xs w-full h-full shadow-2xl z-10">{conteudo(false)}</div>
         </div>
       )}
+
+      {erro && <AvisoErro mensagem={erro} onFechar={() => setErro('')} />}
     </>
   );
 }

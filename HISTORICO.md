@@ -2,6 +2,10 @@
 
 Mais recente primeiro. PATCH a cada envio ao GitHub; MAJOR/MINOR só quando pedido.
 
+## 0.1.3 — 2026-11-19
+
+- Menu: grupo Fiscal com a opção NFe, que abre o erp-nfe já logado numa nova aba (direto na tela de Envios).
+
 ## 0.1.2 — 2026-11-19
 
 - Campos de digitação com fundo azul bem fraco (inclusive as células da grade de itens e parcelas); campo bloqueado continua cinza.

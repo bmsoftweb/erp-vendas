@@ -4,6 +4,7 @@ import { masterPool as pool } from './db.js';
 import { empresaDa } from './empresa.js';
 import { ErroHttp, falha, rota } from './http.js';
 import { transacao } from './davs.js';
+import type { SessionData } from './session.js';
 
 /**
  * Emissão da nota da venda pelos concentradores do erp-nfe (NF-e/NFC-e) e do erp-nfs (NFS-e).
@@ -343,23 +344,30 @@ export function createNotasRouter() {
   }));
 
   /**
-   * Link para abrir o erp-nfe já logado e na nota da venda (botão "NFe"). Leva um token de 5 min
-   * no hash (não vai para logs de servidor); o erp-nfe troca por uma sessão e limpa a barra.
+   * Link para abrir o erp-nfe já logado (opção "NFe" do menu) ou já na nota de uma venda (botão "NFe").
+   * Leva um token de 5 min no hash (não vai para logs de servidor); o erp-nfe troca por uma sessão e limpa a barra.
    */
-  r.get('/vendas/:id/nfe-link', rota(async (req, _res, s) => {
+  async function linkNfe(s: SessionData, vendaId?: string) {
     const empresa = empresaDa(s);
     const uid = Number(s.userId);
-    const [[v]]: any = await pool.query('SELECT id FROM ven_vendas WHERE id = ? AND empresa_id = ?', [req.params.id, empresa]);
-    if (!v) falha('Venda não encontrada.', 404);
+    let v: any;
+    if (vendaId) {
+      [[v]] = await pool.query('SELECT id FROM ven_vendas WHERE id = ? AND empresa_id = ?', [vendaId, empresa]) as any;
+      if (!v) falha('Venda não encontrada.', 404);
+    }
     const url = process.env.NFE_URL;
     const segredo = process.env.NFE_SECRET || '';
     if (!url || segredo.length < 32) falha('Integração com o erp-nfe não configurada (NFE_URL e NFE_SECRET no .env).', 503);
     const emit = await emitenteDe('nfe', uid, empresa);
     // Pela referência: acha também a nota rejeitada, que ainda não está em nfe_documento_id
-    const [[n]]: any = await pool.query('SELECT chave FROM nfe_documentos WHERE empresa_id = ? AND referencia = ? LIMIT 1', [emit.id, `VENDA-${v.id}`]);
+    const [[n]]: any = v
+      ? await pool.query('SELECT chave FROM nfe_documentos WHERE empresa_id = ? AND referencia = ? LIMIT 1', [emit.id, `VENDA-${v.id}`])
+      : [[]];
     const hash = new URLSearchParams({ sso: tokenPara(segredo, uid, emit.id), ...(n?.chave && { chave: n.chave }) });
     return { url: `${url!.replace(/\/$/, '')}/#${hash}`, temNota: !!n?.chave };
-  }));
+  }
+  r.get('/nfe-link', rota(async (_req, _res, s) => linkNfe(s)));
+  r.get('/vendas/:id/nfe-link', rota(async (req, _res, s) => linkNfe(s, req.params.id)));
 
   return r;
 }
