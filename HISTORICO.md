@@ -2,6 +2,18 @@
 
 Mais recente primeiro. PATCH a cada envio ao GitHub; MAJOR/MINOR só quando pedido.
 
+## 0.1.4 — 2026-11-19
+
+- Novas telas no menu: Pessoas (clientes, fornecedores e transportadoras do grupo de empresas, com CPF/CNPJ validado) e Vendedores (cad_vendedores, um cadastro por empresa).
+- Vendedor dos orçamentos, pedidos e vendas passa a vir do cadastro de vendedores (antes eram os usuários).
+- Pesquisas de produto, cliente e transportadora configuráveis pelo usuário (colunas e campos pesquisados), com o catálogo compartilhado com o BM-Master.
+- NF-e, pelo grupo tributário do produto:
+  - manda a alíquota de crédito do Simples (o erp-nfe calcula o valor), e trava o CSOSN 101 sem alíquota;
+  - trava a nota se o grupo não serve ao regime de quem emite (sem CSOSN no Simples, sem CST fora dele) ou está inativo.
+  - Teste: `npx tsx --env-file=.env server/notas.test.ts`.
+- Seta do select encostada à direita, com a moldura do foco também com a lista aberta.
+- Conexão com o banco: fecha as conexões paradas antes de reaproveitar (evita ECONNRESET).
+
 ## 0.1.3 — 2026-11-19
 
 - Menu: grupo Fiscal com a opção NFe, que abre o erp-nfe já logado numa nova aba (direto na tela de Envios).

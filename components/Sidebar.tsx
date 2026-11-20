@@ -4,7 +4,7 @@ import { usePathname, useRouter } from '@/lib/nav';
 import Link from '@/lib/link';
 import {
   FileText, ClipboardList, Receipt, ShoppingBag, Scale, FileCheck2, ExternalLink,
-  LogOut, Menu, X, User, Sun, Moon, ChevronLeft, ChevronRight, ShoppingCart, type LucideIcon,
+  LogOut, Menu, X, User, Sun, Moon, ChevronLeft, ChevronRight, ShoppingCart, Users, Contact, type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { fecharNoMaster } from '@/lib/origemMaster';
@@ -29,7 +29,11 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
   },
   {
     titulo: 'Cadastros',
-    itens: [{ name: 'Naturezas de operação', icon: Scale, href: '/naturezas' }],
+    itens: [
+      { name: 'Pessoas', icon: Contact, href: '/pessoas' },
+      { name: 'Naturezas de operação', icon: Scale, href: '/naturezas' },
+      { name: 'Vendedores', icon: Users, href: '/vendedores' },
+    ],
   },
   {
     titulo: 'Fiscal',

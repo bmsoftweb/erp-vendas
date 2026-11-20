@@ -39,7 +39,7 @@ function pilha(): HTMLElement {
     el = document.createElement('div');
     el.id = 'avisos-no-canto';
     // Só os avisos recebem clique: o espaço vazio da pilha não tampa a tela
-    el.className = 'fixed bottom-24 right-5 z-[80] w-[min(28rem,calc(100vw-2.5rem))] flex flex-col items-end gap-2 pointer-events-none';
+    el.className = 'fixed bottom-24 right-5 z-[200] w-[min(28rem,calc(100vw-2.5rem))] flex flex-col items-end gap-2 pointer-events-none';
     document.body.appendChild(el);
   }
   return el;

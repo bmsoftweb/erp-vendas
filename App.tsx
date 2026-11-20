@@ -4,6 +4,8 @@ import Login from './app/page';
 import { LayoutApp } from '@/components/LayoutApp';
 import TelaDav from './app/davs/TelaDav';
 import Naturezas from './app/naturezas/page';
+import Vendedores from './app/vendedores/page';
+import Pessoas from './app/pessoas/page';
 import Faturar from './app/faturar/page';
 
 /** Uma rota por tela */
@@ -16,6 +18,8 @@ export const App: React.FC = () => (
       <Route path="/faturar" element={<Faturar />} />
       <Route path="/vendas" element={<TelaDav tipo="venda" />} />
       <Route path="/naturezas" element={<Naturezas />} />
+      <Route path="/vendedores" element={<Vendedores />} />
+      <Route path="/pessoas" element={<Pessoas />} />
     </Route>
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>

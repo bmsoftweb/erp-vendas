@@ -53,6 +53,10 @@ export async function lerDav(c: PoolConnection, b: any, empresa: number) {
     if (!cp) falha('Condição de pagamento inválida.');
   }
   const vendedor_id = idOuNull(b?.vendedor_id);
+  if (vendedor_id) {
+    const [[v]]: any = await c.query('SELECT 1 FROM cad_vendedores WHERE id = ? AND empresa_id = ?', [vendedor_id, empresa]);
+    if (!v) falha('Vendedor não encontrado nesta empresa.');
+  }
 
   const itens: any[] = Array.isArray(b?.itens) ? b.itens : [];
   if (!itens.length) falha('Inclua pelo menos um item.');
@@ -161,13 +165,13 @@ export function createDavsRouter() {
     const [linhas] = await pool.query(
       `SELECT d.id, d.numero, d.data_emissao, d.validade, d.status, d.valor_total, d.orcamento_id,
               p.nome AS cliente, p.cpf_cnpj, n.descricao AS natureza, n.documento,
-              COALESCE(NULLIF(u.nome, ''), u.login) AS vendedor,
+              u.nome AS vendedor,
               (SELECT pd.numero FROM ven_davs pd WHERE pd.orcamento_id = d.id LIMIT 1) AS pedido_numero,
               o.numero AS orcamento_numero
          FROM ven_davs d
          JOIN ven_naturezas_operacao n ON n.id = d.natureza_id
          LEFT JOIN cad_pessoas p ON p.id = d.pessoa_id
-         LEFT JOIN sys_usuarios u ON u.id = d.vendedor_id
+         LEFT JOIN cad_vendedores u ON u.id = d.vendedor_id
          LEFT JOIN ven_davs o ON o.id = d.orcamento_id
         WHERE d.empresa_id = ? AND d.tipo = ? ${filtros.map((f) => `AND ${f}`).join(' ')}
         ORDER BY d.numero DESC

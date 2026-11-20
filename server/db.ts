@@ -20,6 +20,11 @@ export const masterPool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  connectTimeout: 20000,
+  enableKeepAlive: true,
+  // O MySQL derruba conexão parada (ECONNRESET): fecha as ociosas antes de serem reaproveitadas
+  maxIdle: 0,
+  idleTimeout: 20000,
 });
 
 // O sistema opera no horário de Brasília (UTC-3), qualquer que seja o fuso do servidor MySQL

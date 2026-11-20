@@ -35,3 +35,9 @@ export const docBr = (v?: string | null) => {
   if (d.length === 14) return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
   return v || '';
 };
+
+/** (47) 3063-2080 / (47) 99116-6107; outro tamanho fica como veio */
+export const foneBr = (v: any) => {
+  const d = String(v ?? '').replace(/\D/g, '');
+  return d.length === 10 || d.length === 11 ? `(${d.slice(0, 2)}) ${d.slice(2, -4)}-${d.slice(-4)}` : String(v ?? '');
+};

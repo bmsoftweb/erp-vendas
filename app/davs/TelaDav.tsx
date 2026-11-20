@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Ban, Calculator, CheckCircle2, Copy, Eye, ExternalLink, FileCheck2, Pencil, Plus, Printer, Save, Search, Trash2, X, XCircle } from 'lucide-react';
+import { Ban, Calculator, CheckCircle2, Copy, Eye, ExternalLink, FileCheck2, Minus, Pencil, Plus, Printer, Save, Search, Trash2, X, XCircle } from 'lucide-react';
 import { useRefreshDaTela } from '@/components/LayoutApp';
 import { ListaCrm } from '@/components/ListaCrm';
 import { TelaCheia, SecaoCrm, GradeCampos, Campo, INPUT_CLASS } from '@/components/FormCrm';
 import { BotaoAcao, SeparadorAcoes, Vazio } from '@/components/MenuAcoes';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { AvisoErro } from '@/components/AvisoErro';
-import { ModalPesquisa } from '@/components/ModalPesquisa';
+import { PesquisaCatalogo } from '@/components/PesquisaCatalogo';
 import { NumberField } from '@/components/NumberField';
 import { DateField } from '@/components/DateField';
 import { api, dataBr, docBr, hojeIso, moeda, qtd } from '@/lib/api';
@@ -41,7 +41,7 @@ interface Apoio {
   naturezas: { id: number; descricao: string; documento: string }[];
   condicoes: { id: number; nome: string; prazos: string; forma_pagamento: string }[];
   vendedores: { id: number; nome: string }[];
-  naturezaPadrao: number | null; validadeDias: number; usuarioId: number;
+  vendedorPadrao: number | null; naturezaPadrao: number | null; validadeDias: number;
 }
 
 const STATUS: Record<string, string> = {
@@ -57,33 +57,9 @@ const STATUS: Record<string, string> = {
   recusado: 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300',
   cancelado: 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
 };
+/** − e + dentro do campo Quantidade da grade de itens */
+const BOTAO_QTD = 'absolute top-1/2 -translate-y-1/2 p-1 rounded text-stone-400 hover:text-stone-800 hover:bg-stone-200/70 dark:hover:text-stone-100 dark:hover:bg-stone-700/70 disabled:opacity-30 disabled:pointer-events-none cursor-pointer';
 const FRETE: Record<number, string> = { 9: 'Sem frete', 0: 'Por conta do emitente (CIF)', 1: 'Por conta do destinatário (FOB)', 2: 'Por conta de terceiros', 3: 'Próprio do emitente', 4: 'Próprio do destinatário' };
-
-/** Pesquisa no servidor enquanto digita (a última resposta vence) */
-function useBusca<T>(url: string | null) {
-  const [itens, setItens] = useState<T[]>([]);
-  const [carregando, setCarregando] = useState(false);
-  const seq = useRef(0);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const buscar = useCallback((termo: string) => {
-    if (!url) return;
-    clearTimeout(timer.current);
-    timer.current = setTimeout(async () => {
-      const n = ++seq.current;
-      setCarregando(true);
-      try {
-        const r = await api<T[]>(`${url}${url.includes('?') ? '&' : '?'}busca=${encodeURIComponent(termo)}`);
-        if (n === seq.current) setItens(r);
-      } finally {
-        if (n === seq.current) setCarregando(false);
-      }
-    }, 250);
-  }, [url]);
-  useEffect(() => {
-    if (url) buscar('');
-  }, [url, buscar]);
-  return { itens, carregando, buscar };
-}
 
 /** Botão no visual de campo que abre a pesquisa */
 const CampoPesquisa: React.FC<{ texto?: string; vazio: string; onAbrir: () => void; onLimpar?: () => void; obrigatorio?: boolean }> = ({ texto, vazio, onAbrir, onLimpar, obrigatorio }) => (
@@ -150,18 +126,13 @@ export default function TelaDav({ tipo }: { tipo: Tipo }) {
   const t = useMemo(() => totais(form?.itens ?? [], form?.valor_frete), [form?.itens, form?.valor_frete]);
   const somaParc = somaParcelas((form?.parcelas ?? []).map((p) => p.valor));
 
-  const urlPesquisa =
-    pesquisa === 'cliente' ? '/api/pessoas' :
-    pesquisa === 'transportadora' ? '/api/pessoas?transportadora=1' :
-    pesquisa === 'produto' ? `/api/produtos?servico=${natureza?.documento === 'nfse' ? 1 : 0}` : null;
-  const busca = useBusca<any>(urlPesquisa);
 
   const novo = () => {
     if (!apoio) return;
     const hoje = hojeIso();
     setForm({
       natureza_id: apoio.naturezaPadrao ?? (apoio.naturezas.length === 1 ? apoio.naturezas[0].id : ''),
-      pessoa_id: null, vendedor_id: apoio.vendedores.some((v) => v.id === apoio.usuarioId) ? apoio.usuarioId : '',
+      pessoa_id: null, vendedor_id: apoio.vendedorPadrao ?? (apoio.vendedores.length === 1 ? apoio.vendedores[0].id : ''),
       condicao_pagamento_id: '', data_emissao: hoje, validade: tipo === 'orcamento' ? somarDias(hoje, apoio.validadeDias) : null,
       modalidade_frete: 9, transportadora_id: null, valor_frete: 0, observacoes: '', informacoes_complementares: '', itens: [], parcelas: [],
     });
@@ -358,7 +329,7 @@ export default function TelaDav({ tipo }: { tipo: Tipo }) {
                       <th className="w-10 text-right">#</th>
                       <th className="text-left">Descrição</th>
                       <th className="w-14 text-center">Un</th>
-                      <th className="w-28 text-right">Quantidade</th>
+                      <th className="w-36 text-right">Quantidade</th>
                       <th className="w-32 text-right">Preço</th>
                       <th className="w-28 text-right">Desconto</th>
                       <th className="w-32 text-right">Total</th>
@@ -371,7 +342,19 @@ export default function TelaDav({ tipo }: { tipo: Tipo }) {
                         <td className="text-right text-stone-500">{i + 1}</td>
                         <td title={it.pedido ? `Pedido ${it.pedido}` : undefined}><input required value={it.descricao} maxLength={120} onFocus={sel} onChange={(e) => mudaItem(i, 'descricao', e.target.value)} className={INPUT_CLASS} /></td>
                         <td className="text-center">{it.unidade}</td>
-                        <td><NumberField value={it.quantidade} scale={4} onChange={(v) => mudaItem(i, 'quantidade', v)} className={INPUT_CLASS} /></td>
+                        <td className="relative">
+                          <NumberField value={it.quantidade} scale={4} onChange={(v) => mudaItem(i, 'quantidade', v)} className={INPUT_CLASS + (editavel && !itensFixos ? ' !pl-7 !pr-7' : '')} />
+                          {editavel && !itensFixos && (
+                            <>
+                              <button type="button" tabIndex={-1} title="Diminuir 1" disabled={Number(it.quantidade) <= 1} onClick={() => mudaItem(i, 'quantidade', (Number(it.quantidade) - 1).toFixed(4))} className={BOTAO_QTD + ' left-1'}>
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <button type="button" tabIndex={-1} title="Aumentar 1" onClick={() => mudaItem(i, 'quantidade', (Number(it.quantidade) + 1).toFixed(4))} className={BOTAO_QTD + ' right-1'}>
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </>
+                          )}
+                        </td>
                         <td><NumberField value={it.preco_unitario} scale={2} onChange={(v) => mudaItem(i, 'preco_unitario', v)} className={INPUT_CLASS} /></td>
                         <td><NumberField value={it.valor_desconto} scale={2} onChange={(v) => mudaItem(i, 'valor_desconto', v)} className={INPUT_CLASS} /></td>
                         <td className="text-right font-semibold tabular-nums">{moeda(totalItem(it))}</td>
@@ -500,19 +483,10 @@ export default function TelaDav({ tipo }: { tipo: Tipo }) {
         </TelaCheia>
 
         {pesquisa === 'produto' && (
-          <ModalPesquisa
+          <PesquisaCatalogo
+            tipo="produtos"
             titulo={natureza?.documento === 'nfse' ? 'Adicionar serviço' : 'Adicionar produto'}
-            placeholder="Nome, SKU ou código de barras"
-            itens={busca.itens}
-            carregando={busca.carregando}
-            onBusca={busca.buscar}
-            chave={(p) => p.id}
-            colunas={[
-              { label: 'Produto', render: (p) => p.nome },
-              { label: 'SKU', render: (p) => p.sku, largura: 'w-28' },
-              { label: 'Un', render: (p) => p.unidade, alinhar: 'centro', largura: 'w-14' },
-              { label: 'Preço', render: (p) => moeda(p.preco_venda), alinhar: 'direita', largura: 'w-28' },
-            ]}
+            filtros={`servico=${natureza?.documento === 'nfse' ? 1 : 0}`}
             onEscolher={(p) => {
               setPesquisa(null);
               muda('itens', [...form.itens, { produto_id: p.id, descricao: p.nome, unidade: p.unidade, quantidade: 1, preco_unitario: Number(p.preco_venda || 0), valor_desconto: 0 }]);
@@ -521,18 +495,10 @@ export default function TelaDav({ tipo }: { tipo: Tipo }) {
           />
         )}
         {(pesquisa === 'cliente' || pesquisa === 'transportadora') && (
-          <ModalPesquisa
+          <PesquisaCatalogo
+            key={pesquisa}
+            tipo={pesquisa === 'cliente' ? 'clientes' : 'transportadoras'}
             titulo={pesquisa === 'cliente' ? 'Escolher cliente' : 'Escolher transportadora'}
-            placeholder="Nome, CPF/CNPJ ou código"
-            itens={busca.itens}
-            carregando={busca.carregando}
-            onBusca={busca.buscar}
-            chave={(p) => p.id}
-            colunas={[
-              { label: 'Nome', render: (p) => p.nome },
-              { label: 'CPF/CNPJ', render: (p) => docBr(p.cpf_cnpj), largura: 'w-40' },
-              { label: 'Cidade', render: (p) => [p.cidade, p.uf].filter(Boolean).join('/'), largura: 'w-40' },
-            ]}
             onEscolher={(p) => {
               setPesquisa(null);
               setForm(pesquisa === 'cliente' ? { ...form, pessoa_id: p.id, cliente: p.nome, cpf_cnpj: p.cpf_cnpj } : { ...form, transportadora_id: p.id, transportadora: p.nome });

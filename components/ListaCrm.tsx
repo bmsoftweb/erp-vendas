@@ -81,11 +81,18 @@ interface Props<T> {
   buscar?: boolean;
   /** "N por página" e paginação (padrão: ligada). Desligar em árvores e painéis */
   paginar?: boolean;
+  /** Linha destacada controlada pela tela (ex.: setas na pesquisa); rola até ela */
+  selecionada?: string | number | null;
+  /** Clique na linha (ex.: escolher na pesquisa) */
+  onClique?: (linha: T) => void;
+  /** Colunas visíveis sem configuração gravada (padrão: todas) */
+  visiveisPadrao?: string[];
   className?: string;
 }
 
-export function ListaCrm<T>({ id, colunas, linhas: linhasOrigem, chave, ordenavel = true, carregando, vazio, onEditar, acoes, acoesEmMenu, detalhe, expansivel, aberta, onAlternar, rodape, ordemExterna, onOrdenar, extraMenu, onNovo, rotuloNovo = 'Novo', barraExtra, buscar = true, paginar = true, className = 'max-h-[calc(100vh-var(--altura-topo))]' }: Props<T>) {
-  const [prefs, setPrefs] = useState<Prefs>(PADRAO);
+export function ListaCrm<T>({ id, colunas, linhas: linhasOrigem, chave, ordenavel = true, carregando, vazio, onEditar, acoes, acoesEmMenu, detalhe, expansivel, aberta, onAlternar, rodape, ordemExterna, onOrdenar, extraMenu, onNovo, rotuloNovo = 'Novo', barraExtra, buscar = true, paginar = true, selecionada: selecionadaExt, onClique, visiveisPadrao, className = 'max-h-[calc(100vh-var(--altura-topo))]' }: Props<T>) {
+  const padrao: Prefs = { ...PADRAO, visiveis: visiveisPadrao ?? null };
+  const [prefs, setPrefs] = useState<Prefs>(padrao);
   const [ordem, setOrdem] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null);
   const [sobra, setSobra] = useState(true);
   const [selecionada, setSelecionada] = useState<string | number | null>(null);
@@ -146,7 +153,7 @@ export function ListaCrm<T>({ id, colunas, linhas: linhasOrigem, chave, ordenave
     lerConfigListas().then((tudo) => {
       const p = (tudo as Record<string, any>)[id];
       if (vivo && p) {
-        setPrefs({ ...PADRAO, ...p });
+        setPrefs({ ...padrao, ...p });
         setSobra(p.modo === 'manual' || !p.modo ? p.sobra !== false : p.modo === 'melhor');
       }
     }).catch(() => {});
@@ -154,6 +161,10 @@ export function ListaCrm<T>({ id, colunas, linhas: linhasOrigem, chave, ordenave
       vivo = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    if (selecionadaExt != null) tabela.current?.querySelector('tr[data-sel]')?.scrollIntoView({ block: 'nearest' });
+  }, [selecionadaExt]);
 
   useEffect(() => {
     if (!toast) return;
@@ -208,7 +219,7 @@ export function ListaCrm<T>({ id, colunas, linhas: linhasOrigem, chave, ordenave
         return;
       }
       // ajustar: reparte a área livre proporcional às larguras naturais, sem sobra
-      const disponivel = Math.max(0, (area.current?.clientWidth ?? 0) - W_IND - (thAcoes.current?.offsetWidth ?? W_ACOES));
+      const disponivel = Math.max(0, (area.current?.clientWidth ?? 0) - W_IND - (acoes ? thAcoes.current?.offsetWidth ?? W_ACOES : 0));
       const soma = chaves.reduce((s, k) => s + nat[k], 0) || 1;
       const r: Record<string, number> = {};
       let usado = 0;
@@ -341,7 +352,7 @@ export function ListaCrm<T>({ id, colunas, linhas: linhasOrigem, chave, ordenave
     setMenu(null);
   };
 
-  const nCols = ordenadas.length + 2 + (sobra ? 1 : 0);
+  const nCols = ordenadas.length + (acoes ? 2 : 1) + (sobra ? 1 : 0);
 
   return (
     <div className={`flex flex-col min-h-0 bg-white dark:bg-stone-900 ${className}`}>
@@ -421,26 +432,27 @@ export function ListaCrm<T>({ id, colunas, linhas: linhasOrigem, chave, ordenave
               </th>
             ))}
             {sobra && <th className="w-full border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950" />}
-            <th ref={thAcoes} className={`sticky right-0 z-20 ${wAcoes} px-3 py-2.5 text-center font-semibold text-stone-600 dark:text-stone-300 whitespace-nowrap border-b border-l border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950`}>
+            {acoes && <th ref={thAcoes} className={`sticky right-0 z-20 ${wAcoes} px-3 py-2.5 text-center font-semibold text-stone-600 dark:text-stone-300 whitespace-nowrap border-b border-l border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950`}>
               Ações
-              {acoesEmMenu && acoes && (
+              {acoesEmMenu && (
                 <button type="button" onClick={alternarAcoes} title={acoesAbertas ? 'Voltar as ações para o menu' : 'Mostrar todas as ações na coluna'} className="ml-1.5 p-0.5 rounded align-middle text-stone-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-950/40 cursor-pointer">
                   {acoesAbertas ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
               )}
-            </th>
+            </th>}
           </tr>
         </thead>
         <tbody className={carregando && linhas.length ? 'opacity-60' : ''}>
           {linhas.map((l) => {
             const k = chave(l);
-            const sel = selecionada === k;
+            const sel = (selecionadaExt !== undefined ? selecionadaExt : selecionada) === k;
             const exp = expansivel?.(l) ?? false;
             const abertaL = aberta ? aberta(l) : sel;
             return (
               <React.Fragment key={k}>
                 <tr
-                  onClick={() => setSelecionada(k)}
+                  data-sel={sel || undefined}
+                  onClick={() => (setSelecionada(k), onClique?.(l))}
                   onDoubleClick={() => onEditar?.(l)}
                   className={`group cursor-default transition-colors ${sel ? 'bg-blue-50 dark:bg-blue-950/30' : 'bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800/60'}`}
                 >
@@ -459,9 +471,11 @@ export function ListaCrm<T>({ id, colunas, linhas: linhasOrigem, chave, ordenave
                     </td>
                   ))}
                   {sobra && <td className={bB} />}
-                  <td className={`sticky right-0 z-[5] ${wAcoes} px-3 py-[7.5px] text-center whitespace-nowrap bg-inherit border-l border-stone-200 dark:border-stone-800 ${bB}`}>
-                    <div className="flex items-center justify-center gap-0.5">{emMenu ? <MenuAcoes>{acoes?.(l)}</MenuAcoes> : acoes?.(l)}</div>
-                  </td>
+                  {acoes && (
+                    <td className={`sticky right-0 z-[5] ${wAcoes} px-3 py-[7.5px] text-center whitespace-nowrap bg-inherit border-l border-stone-200 dark:border-stone-800 ${bB}`}>
+                      <div className="flex items-center justify-center gap-0.5">{emMenu ? <MenuAcoes>{acoes(l)}</MenuAcoes> : acoes(l)}</div>
+                    </td>
+                  )}
                 </tr>
                 {abertaL && detalhe && (
                   <tr>
@@ -492,7 +506,7 @@ export function ListaCrm<T>({ id, colunas, linhas: linhasOrigem, chave, ordenave
                 </td>
               ))}
               {sobra && <td className="border-t border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950" />}
-              <td className={`sticky right-0 z-20 ${wAcoes} border-t border-l border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950`} />
+              {acoes && <td className={`sticky right-0 z-20 ${wAcoes} border-t border-l border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950`} />}
             </tr>
           </tfoot>
         )}
@@ -523,7 +537,7 @@ export function ListaCrm<T>({ id, colunas, linhas: linhasOrigem, chave, ordenave
 
       {menu &&
         createPortal(
-          <div data-menu-lista role="menu" style={{ top: menu.top, left: menu.left }} className="fixed z-[60] w-56 py-1 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 shadow-xl">
+          <div data-menu-lista role="menu" style={{ top: menu.top, left: menu.left }} className="fixed z-[130] w-56 py-1 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 shadow-xl">
             {itemMenu('Ajustar largura', () => (setMenu(null), aplicarModo('ajustar')), prefs.modo === 'ajustar')}
             {itemMenu('Melhor largura', () => (setMenu(null), aplicarModo('melhor')), prefs.modo === 'melhor')}
             {linha}

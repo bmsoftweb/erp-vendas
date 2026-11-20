@@ -85,7 +85,8 @@ async function carregar(vendaId: unknown, empresa: number) {
   if (!v) falha('Venda não encontrada.', 404);
   const [itens]: any = await pool.query(
     `SELECT vi.*, p.sku, p.codigo_barras, p.ncm, p.cest, p.servico, p.cserv_nacional, p.cserv_municipal, p.cnbs, p.aliquota_iss, p.iss_retido,
-            g.id AS grupo_id, g.origem, g.cfop_dentro_uf, g.cfop_fora_uf, g.csosn, g.cst_icms, g.aliquota_icms,
+            g.id AS grupo_id, g.descricao AS grupo_descricao, g.ativo AS grupo_ativo, g.origem, g.cfop_dentro_uf, g.cfop_fora_uf,
+            g.csosn, g.aliquota_credito_sn, g.cst_icms, g.aliquota_icms,
             g.cst_pis, g.aliquota_pis, g.cst_cofins, g.aliquota_cofins, g.cst_ibscbs, g.cclass_trib
        FROM ven_venda_itens vi JOIN cad_produtos p ON p.id = vi.produto_id
        LEFT JOIN fis_grupos_tributarios g ON g.id = p.grupo_tributario_id
@@ -138,6 +139,22 @@ export function ratear(total: number, pesos: number[]): number[] {
   return partes.map((p) => p / 100);
 }
 
+/**
+ * ICMS do item pelo grupo tributário do produto (fis_grupos_tributarios, cadastro do erp-estoque): CSOSN para emitente
+ * do Simples, com o crédito do Simples (o erp-nfe calcula o valor), e CST do ICMS para os demais. O grupo precisa estar
+ * ativo e ser do regime de quem emite.
+ */
+export function icmsDoItem(i: any, simples: boolean, rot: string): { csosn: string; aliquotaCredito?: number } | { cst: string } {
+  const grupo = `o grupo tributário "${i.grupo_descricao}"`;
+  const onde = 'Troque o grupo nos dados fiscais do produto (erp-estoque).';
+  if (!Number(i.grupo_ativo)) falha(`${rot}: ${grupo} está inativo. ${onde}`);
+  if (!simples) return i.cst_icms ? { cst: String(i.cst_icms) } : falha(`${rot}: ${grupo} não tem CST do ICMS, e a empresa não é do Simples Nacional. ${onde}`);
+  if (!i.csosn) falha(`${rot}: ${grupo} não tem CSOSN, e a empresa é do Simples Nacional. ${onde}`);
+  const credito = Number(i.aliquota_credito_sn) || 0;
+  if (String(i.csosn) === '101' && !(credito > 0)) falha(`${rot}: ${grupo} é CSOSN 101 e está sem a alíquota de crédito do Simples. Preencha no grupo (erp-estoque › Dados Fiscais).`);
+  return { csosn: String(i.csosn), ...(credito > 0 && { aliquotaCredito: credito }) };
+}
+
 /** documento do POST /api/calcular e /api/emitir do erp-nfe */
 async function montarNFe(d: Awaited<ReturnType<typeof carregar>>, emit: any) {
   const { v, itens, parcelas, cliente, transportadora } = d;
@@ -179,7 +196,7 @@ async function montarNFe(d: Awaited<ReturnType<typeof carregar>>, emit: any) {
       valorFrete: fretes[k] || undefined,
       imposto: {
         origem: Number(i.origem ?? 0),
-        ...(simples ? { csosn: i.csosn } : { cst: i.cst_icms }),
+        ...icmsDoItem(i, simples, rot),
         aliquota: Number(i.aliquota_icms || 0),
         pis: { cst: i.cst_pis, aliquota: Number(i.aliquota_pis || 0) },
         cofins: { cst: i.cst_cofins, aliquota: Number(i.aliquota_cofins || 0) },

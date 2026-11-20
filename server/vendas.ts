@@ -60,14 +60,14 @@ export function createVendasRouter() {
     const [linhas] = await pool.query(
       `SELECT v.id, v.numero, v.data_emissao, v.status, v.valor_total, v.origem,
               p.nome AS cliente, p.cpf_cnpj, n.descricao AS natureza, n.documento,
-              COALESCE(NULLIF(u.nome, ''), u.login) AS vendedor,
+              u.nome AS vendedor,
               (SELECT GROUP_CONCAT(DISTINCT d.numero ORDER BY d.numero SEPARATOR ', ')
                  FROM ven_venda_itens vi JOIN ven_dav_itens di ON di.id = vi.dav_item_id JOIN ven_davs d ON d.id = di.dav_id
                 WHERE vi.venda_id = v.id) AS pedidos
          FROM ven_vendas v
          JOIN ven_naturezas_operacao n ON n.id = v.natureza_id
          LEFT JOIN cad_pessoas p ON p.id = v.pessoa_id
-         LEFT JOIN sys_usuarios u ON u.id = v.vendedor_id
+         LEFT JOIN cad_vendedores u ON u.id = v.vendedor_id
         WHERE v.empresa_id = ? ${filtros.map((f) => `AND ${f}`).join(' ')}
         ORDER BY v.numero DESC
         LIMIT 1000`,

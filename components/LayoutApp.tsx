@@ -15,6 +15,8 @@ const TELAS: Record<string, { titulo: string; subtitulo: string; semCabecalho?: 
   '/faturar': { titulo: 'Faturar pedidos', subtitulo: 'Junta pedidos do mesmo cliente, total ou em parte, numa venda' },
   '/vendas': { titulo: 'Vendas', subtitulo: 'Faturamento: cada venda vira uma nota' },
   '/naturezas': { titulo: 'Naturezas de operação', subtitulo: 'Documento fiscal, finalidade e CFOP de cada tipo de venda' },
+  '/pessoas': { titulo: 'Pessoas', subtitulo: 'Clientes, fornecedores e transportadoras do grupo de empresas' },
+  '/vendedores': { titulo: 'Vendedores', subtitulo: 'Quem vende: aparece nos orçamentos, pedidos e vendas' },
 };
 
 /** O botão de recarregar do cabeçalho chama o que a tela ativa registrou */
