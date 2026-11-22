@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { ListPlus, Pencil, Trash2 } from 'lucide-react';
 import { useRefreshDaTela } from '@/components/LayoutApp';
 import { ListaCrm } from '@/components/ListaCrm';
 import { FormCrm, Campo, INPUT_CLASS } from '@/components/FormCrm';
@@ -9,6 +9,7 @@ import { AvisoErro } from '@/components/AvisoErro';
 import { NumberField } from '@/components/NumberField';
 import { Toggle } from '@/components/Toggle';
 import { api } from '@/lib/api';
+import { NATUREZAS_PADRAO } from '@/lib/naturezasPadrao';
 
 interface Natureza {
   id?: number;
@@ -40,6 +41,15 @@ export default function NaturezasPage() {
   const [erroForm, setErroForm] = useState('');
   const [erro, setErro] = useState('');
   const [excluir, setExcluir] = useState<Natureza | null>(null);
+  const [padrao, setPadrao] = useState(false);
+  const [aviso, setAviso] = useState<{ texto: string; tom: 'sucesso' | 'alerta' } | null>(null);
+
+  const criarPadrao = async () => {
+    const { incluidas } = await api('/api/naturezas/padrao', 'POST');
+    setPadrao(false);
+    await carregar();
+    setAviso(incluidas ? { texto: `${incluidas} natureza(s) de operação incluída(s).`, tom: 'sucesso' } : { texto: 'As naturezas padrão já estavam cadastradas.', tom: 'alerta' });
+  };
 
   const carregar = useCallback(async () => {
     try {
@@ -156,7 +166,18 @@ export default function NaturezasPage() {
           chave={(r) => r.id!}
           onNovo={() => (setErroForm(''), setForm({ ...NOVA }))}
           onEditar={(r) => (setErroForm(''), setForm({ ...r }))}
-          vazio="Nenhuma natureza de operação cadastrada. Comece por “Venda de mercadoria”."
+          vazio="Nenhuma natureza de operação cadastrada: use Naturezas padrão para começar."
+          barraExtra={
+            <button
+              type="button"
+              onClick={() => setPadrao(true)}
+              title="Cria as naturezas de operação mais comuns, com o CFOP de cada uma"
+              className="flex items-center gap-1.5 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap"
+            >
+              <ListPlus className="w-3.5 h-3.5" />
+              <span>Naturezas padrão</span>
+            </button>
+          }
           colunas={[
             { key: 'descricao', label: 'Descrição', largura: 280 },
             { key: 'documento', label: 'Documento', alinhar: 'centro', largura: 110, render: (r) => DOCUMENTO[r.documento] },
@@ -185,6 +206,31 @@ export default function NaturezasPage() {
           onCancelar={() => setExcluir(null)}
         />
       )}
+      {padrao && (
+        <ConfirmDialog
+          titulo="Naturezas padrão"
+          tom="normal"
+          confirmar="Criar naturezas"
+          mensagem="Cria as naturezas de operação mais comuns da NF-e, com o CFOP dentro e fora do estado. As que já existem com o mesmo nome ficam como estão; depois dá para ajustar cada uma."
+          onConfirmar={criarPadrao}
+          onCancelar={() => setPadrao(false)}
+        >
+          <ul className="space-y-1 text-xs text-stone-600 dark:text-stone-300">
+            {NATUREZAS_PADRAO.map((n) => (
+              <li key={n.descricao}>
+                <span className="font-semibold text-stone-800 dark:text-stone-100">{n.descricao}</span>
+                <span className="text-stone-400">
+                  {' '}• CFOP {n.cfop_estadual}/{n.cfop_interestadual}
+                  {n.tipo_operacao ? '' : ' • Entrada'}
+                  {n.finalidade === 4 ? ' • Devolução' : ''}
+                  {n.movimenta_estoque ? '' : ' • Sem estoque'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </ConfirmDialog>
+      )}
+      {aviso && <AvisoErro tom={aviso.tom} mensagem={aviso.texto} onFechar={() => setAviso(null)} />}
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro('')} />}
     </div>
   );

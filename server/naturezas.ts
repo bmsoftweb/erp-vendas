@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { masterPool as pool } from './db.js';
 import { empresaDa } from './empresa.js';
 import { falha, rota } from './http.js';
+import { NATUREZAS_PADRAO } from '../lib/naturezasPadrao.js';
 
 const DOCUMENTOS = ['nfe', 'nfce', 'nfse'];
 
@@ -60,6 +61,25 @@ export function createNaturezasRouter() {
     const n = lerNatureza(req.body);
     const [res]: any = await pool.query('INSERT INTO ven_naturezas_operacao SET ?', [{ ...n, empresa_id: empresaDa(s) }]).catch(duplicada);
     return { id: res.insertId };
+  }));
+
+  // Naturezas prontas (lib/naturezasPadrao.ts); as que já existem com o mesmo nome ficam como estão
+  r.post('/naturezas/padrao', rota(async (_req, _res, s) => {
+    const empresa = empresaDa(s);
+    const [existentes]: any = await pool.query('SELECT descricao FROM ven_naturezas_operacao WHERE empresa_id = ?', [empresa]);
+    const ja = new Set(existentes.map((x: any) => String(x.descricao).trim().toLowerCase()));
+    const novas = NATUREZAS_PADRAO.filter((n) => !ja.has(n.descricao.toLowerCase())).map((n) => lerNatureza({ ...n, documento: 'nfe' }));
+    if (!novas.length) return { incluidas: 0 };
+
+    // CFOP tem que estar na tabela oficial e em vigor (Tabelas Fiscais do erp-nfe)
+    const cfops = [...new Set(novas.flatMap((n) => [n.cfop_estadual, n.cfop_interestadual]))];
+    const [vigentes]: any = await pool.query('SELECT cfop FROM fis_cfop WHERE cfop IN (?) AND ind_nfe = 1 AND (fim_vigencia IS NULL OR fim_vigencia >= CURDATE())', [cfops]);
+    const falta = cfops.filter((c) => !vigentes.some((v: any) => v.cfop === c));
+    if (falta.length) falha(`CFOP ${falta.join(', ')} fora da tabela oficial em vigor (atualize em Tabelas Fiscais no erp-nfe).`);
+
+    const cols = Object.keys(novas[0]);
+    await pool.query(`INSERT INTO ven_naturezas_operacao (empresa_id, ${cols.join(', ')}) VALUES ?`, [novas.map((n: any) => [empresa, ...cols.map((c) => n[c])])]);
+    return { incluidas: novas.length };
   }));
 
   r.patch('/naturezas/:id', rota(async (req, _res, s) => {

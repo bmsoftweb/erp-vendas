@@ -2,6 +2,10 @@
 
 Mais recente primeiro. PATCH a cada envio ao GitHub; MAJOR/MINOR só quando pedido.
 
+## 0.1.5 — 2026-11-21
+
+- Naturezas de operação: botão "Naturezas padrão" cria as mais comuns da NF-e com o CFOP dentro e fora do estado (as que já existem com o mesmo nome ficam como estão).
+
 ## 0.1.4 — 2026-11-19
 
 - Novas telas no menu: Pessoas (clientes, fornecedores e transportadoras do grupo de empresas, com CPF/CNPJ validado) e Vendedores (cad_vendedores, um cadastro por empresa).
