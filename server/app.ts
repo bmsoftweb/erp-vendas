@@ -8,6 +8,8 @@ import { createPessoasRouter } from './pessoas.js';
 import { createVendasRouter } from './vendas.js';
 import { createNotasRouter } from './notas.js';
 import { createPesquisasRouter } from './pesquisas.js';
+import { createDav180Router } from './dav180.js';
+import { createRequisicoesRouter } from './requisicoes.js';
 
 /**
  * App Express só com a API (/api/*). Usado pelo servidor local (server.ts), que põe o front-end por cima,
@@ -26,6 +28,8 @@ export function createApp() {
   app.use('/api', createVendasRouter());
   app.use('/api', createNotasRouter());
   app.use('/api', createPesquisasRouter());
+  app.use('/api', createDav180Router());
+  app.use('/api', createRequisicoesRouter());
 
   // API desconhecida: 404 em JSON em vez de cair no index.html
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Rota não encontrada' }));

@@ -269,6 +269,9 @@ export default function PessoasPage() {
               <Campo rotulo="Vendedor">{combo('vendedor_id', apoio?.vendedores ?? [], form.vendedor_nome)}</Campo>
               <Campo rotulo="Tipo de cliente">{combo('tipo_cliente_id', apoio?.tipos ?? [])}</Campo>
               <Campo rotulo="Região">{combo('regiao_id', apoio?.regioes ?? [])}</Campo>
+              <Campo rotulo="Clube de descontos" dica="Associado: no PDV, com o CPF dele na venda, os itens saem pelo preço das listas de preço do clube (erp-estoque).">
+                <Toggle checked={!!Number(form.clube_desconto)} onChange={(v) => muda('clube_desconto', v ? 1 : 0)} />
+              </Campo>
               <Campo rotulo="Bloqueado">
                 <Toggle checked={!!Number(form.bloqueado)} onChange={(v) => muda('bloqueado', v ? 1 : 0)} />
               </Campo>

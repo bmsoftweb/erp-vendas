@@ -1,20 +1,23 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Receipt, Search } from 'lucide-react';
+import { Receipt, Search, Ticket } from 'lucide-react';
 import { useRefreshDaTela } from '@/components/LayoutApp';
-import { INPUT_CLASS } from '@/components/FormCrm';
+import { Campo, INPUT_CLASS } from '@/components/FormCrm';
+import { PesquisaCatalogo } from '@/components/PesquisaCatalogo';
+import { CampoPesquisa } from '@/app/davs/TelaDav';
 import { AvisoErro } from '@/components/AvisoErro';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { NumberField } from '@/components/NumberField';
 import { Toggle } from '@/components/Toggle';
 import { useRouter } from '@/lib/nav';
-import { api, dataBr, docBr, moeda, qtd } from '@/lib/api';
+import { api, dataBr, docBr, moeda, numDav, qtd } from '@/lib/api';
 import { totalItem } from '@/lib/totais';
+import { ehVenda } from '@/lib/modelo';
 
 /** Item de pedido com saldo (GET /api/vendas/pendentes) */
 interface Pendente {
-  dav_id: number; numero: number; data_emissao: string; status: string; valor_frete: string; pessoa_id: number | null; cliente: string | null; cpf_cnpj: string | null;
+  dav_id: number; numero: number; prevenda_senha: string | null; data_emissao: string; status: string; valor_frete: string; pessoa_id: number | null; cliente: string | null; cpf_cnpj: string | null;
   natureza_id: number; natureza: string; item_id: number; item: number; descricao: string; unidade: string;
-  quantidade: string; preco_unitario: string; valor_desconto: string; faturado: string;
+  quantidade: string; preco_unitario: string; valor_desconto: string; faturado: string; iat: string | null;
 }
 
 const saldoDe = (i: Pendente) => (Math.round(Number(i.quantidade) * 10000) - Math.round(Number(i.faturado) * 10000)) / 10000;
@@ -22,7 +25,7 @@ const saldoDe = (i: Pendente) => (Math.round(Number(i.quantidade) * 10000) - Mat
 const valorDe = (i: Pendente, q: number) => {
   const inteiro = Math.round(q * 10000) === Math.round(Number(i.quantidade) * 10000);
   const desconto = inteiro ? Number(i.valor_desconto) : Math.round((Number(i.valor_desconto) * q) / Number(i.quantidade) * 100) / 100;
-  return totalItem({ quantidade: q, preco_unitario: i.preco_unitario, valor_desconto: desconto });
+  return totalItem({ quantidade: q, preco_unitario: i.preco_unitario, valor_desconto: desconto, iat: i.iat });
 };
 
 /**
@@ -40,6 +43,14 @@ export default function FaturarPage() {
   const [confirma, setConfirma] = useState(false);
   const [erro, setErro] = useState('');
   const [aviso, setAviso] = useState('');
+  // Caixa da pré-venda: senha → diálogo com natureza (NFC-e/NF-e) e cliente → venda aberta para o pagamento
+  const [senha, setSenha] = useState('');
+  const [caixa, setCaixa] = useState<{ p: Pendente; total: number; natureza_id: string; pessoa_id: number | null; cliente: string } | null>(null);
+  const [pesquisaCliente, setPesquisaCliente] = useState(false);
+  const [naturezas, setNaturezas] = useState<{ id: number; descricao: string; documento: string; cfop_estadual: string | null }[]>([]);
+  useEffect(() => {
+    api('/api/naturezas').then((n) => setNaturezas(n.filter((x: any) => Number(x.ativo) && ['nfe', 'nfce'].includes(x.documento))), (e) => setErro(e.message));
+  }, []);
 
   const carregar = useCallback(async () => {
     try {
@@ -61,7 +72,7 @@ export default function FaturarPage() {
     const t = busca.trim().toLowerCase();
     const mapa = new Map<number, Pendente[]>();
     for (const i of itens) {
-      if (t && !`${i.numero} ${i.cliente ?? ''} ${i.cpf_cnpj ?? ''}`.toLowerCase().includes(t)) continue;
+      if (t && !`${i.numero} ${i.prevenda_senha ?? ''} ${i.cliente ?? ''} ${i.cpf_cnpj ?? ''}`.toLowerCase().includes(t)) continue;
       mapa.set(i.dav_id, [...(mapa.get(i.dav_id) ?? []), i]);
     }
     return [...mapa.values()];
@@ -96,6 +107,38 @@ export default function FaturarPage() {
     }
   };
 
+  const abrirCaixa = () => {
+    const s = senha.replace(/\D/g, '');
+    const linhas = itens.filter((i) => i.prevenda_senha === s);
+    if (s.length !== 6) return setAviso('Informe os 6 dígitos da senha da pré-venda.');
+    if (!linhas.length) return setAviso(`Nenhuma pré-venda em aberto com a senha ${s}.`);
+    const p = linhas[0];
+    const fr = p.status === 'aberto' ? Math.round(Number(p.valor_frete) * 100) : 0;
+    const total = (linhas.reduce((t, i) => t + Math.round(valorDe(i, saldoDe(i)) * 100), 0) + fr) / 100;
+    setCaixa({ p, total, natureza_id: String(p.natureza_id), pessoa_id: p.pessoa_id, cliente: p.cliente ? `${p.cliente}${p.cpf_cnpj ? ` • ${docBr(p.cpf_cnpj)}` : ''}` : '' });
+  };
+  // Modelo pelo cliente (Requisito IV): só as naturezas de venda dele; a que deixa de servir vira a única que sobra
+  const [modelo, setModelo] = useState<'nfe' | 'nfce' | null>(null);
+  const comCaixa = !!caixa;
+  useEffect(() => {
+    if (!comCaixa) return setModelo(null);
+    api(`/api/modelo-nota?pessoa_id=${caixa?.pessoa_id ?? ''}&total=${caixa?.total ?? 0}`).then((r) => setModelo(r.modelo), (e) => setErro(e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comCaixa, caixa?.pessoa_id, (caixa?.total ?? 0) >= 200000]);
+  const servem = naturezas.filter((n) => ehVenda(n.cfop_estadual) && (!modelo || n.documento === modelo));
+  useEffect(() => {
+    if (!caixa || !modelo || servem.some((n) => n.id === Number(caixa.natureza_id))) return;
+    setCaixa({ ...caixa, natureza_id: servem.length === 1 ? String(servem[0].id) : '' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modelo, caixa?.natureza_id]);
+  const nfce = modelo === 'nfce';
+  const confirmarCaixa = async () => {
+    if (!caixa) return;
+    if (!caixa.natureza_id) throw new Error('Escolha a natureza de operação.');
+    const v = await api('/api/vendas/prevenda', 'POST', { senha: caixa.p.prevenda_senha, natureza_id: Number(caixa.natureza_id), pessoa_id: caixa.pessoa_id });
+    router.push(`/vendas?abrir=${v.id}`);
+  };
+
   const nPedidos = new Set(escolhidos.map((i) => i.dav_id)).size;
   const th = 'px-2 py-2 font-semibold border-b border-r border-stone-200 dark:border-stone-800';
   const td = 'px-2 py-1 border-b border-r border-stone-200 dark:border-stone-800';
@@ -103,10 +146,19 @@ export default function FaturarPage() {
   return (
     <div className="flex-1 flex flex-col min-h-0 min-w-0">
       <div className="flex items-center gap-3 px-4 py-2 border-b border-stone-200 dark:border-stone-800 text-xs">
+        <form onSubmit={(e) => (e.preventDefault(), abrirCaixa())} className="flex items-center gap-2">
+          <label className="relative w-44">
+            <Ticket className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+            <input value={senha} onChange={(e) => setSenha(e.target.value.replace(/\D/g, '').slice(0, 6))} onFocus={(e) => e.target.select()} inputMode="numeric" autoFocus placeholder="Senha da pré-venda" className={`${INPUT_CLASS} pl-8 font-mono`} />
+          </label>
+          <button type="submit" title="Abre a venda da pré-venda para receber o pagamento e emitir a nota" className="flex items-center gap-1.5 px-3 h-[34px] rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold cursor-pointer">
+            Caixa
+          </button>
+        </form>
         <span className="text-stone-500 mr-auto">{carregando ? 'Carregando…' : `${pedidos.length} pedido(s) com saldo a faturar`}</span>
         <label className="relative w-72">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
-          <input value={busca} onChange={(e) => setBusca(e.target.value)} onFocus={(e) => e.target.select()} placeholder="Pedido, cliente ou CPF/CNPJ" className={`${INPUT_CLASS} pl-8`} />
+          <input value={busca} onChange={(e) => setBusca(e.target.value)} onFocus={(e) => e.target.select()} placeholder="Pedido, senha da pré-venda, cliente ou CPF/CNPJ" className={`${INPUT_CLASS} pl-8`} />
         </label>
       </div>
 
@@ -118,7 +170,8 @@ export default function FaturarPage() {
           return (
             <div key={p.dav_id} className={`rounded-lg border ${ligado ? 'border-blue-400 dark:border-blue-700' : 'border-stone-200 dark:border-stone-800'}`}>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 text-xs bg-stone-50 dark:bg-stone-950 rounded-t-lg">
-                <Toggle size="sm" checked={ligado} onChange={(v) => marcar(p, v)} label={<b>Pedido {p.numero}</b>} />
+                <Toggle size="sm" checked={ligado} onChange={(v) => marcar(p, v)} label={<b>Pedido {numDav(p.numero)}</b>} />
+                {p.prevenda_senha && <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">Pré-venda • senha <span className="font-mono">{p.prevenda_senha}</span></span>}
                 <span>{dataBr(p.data_emissao)}</span>
                 <span className="font-semibold">{p.cliente ?? 'Consumidor'}{p.cpf_cnpj ? ` • ${docBr(p.cpf_cnpj)}` : ''}</span>
                 <span className="text-stone-500">{p.natureza}</span>
@@ -183,6 +236,45 @@ export default function FaturarPage() {
           tom="normal"
           onConfirmar={gerar}
           onCancelar={() => setConfirma(false)}
+        />
+      )}
+      {caixa && !pesquisaCliente && (
+        <ConfirmDialog
+          titulo={`Pré-venda • senha ${caixa.p.prevenda_senha}`}
+          mensagem={`Pedido ${numDav(caixa.p.numero)}, ${moeda(caixa.total)}. A venda abre em seguida para lançar o pagamento e emitir a nota.`}
+          confirmar="Abrir venda"
+          tom="normal"
+          onConfirmar={confirmarCaixa}
+          onCancelar={() => setCaixa(null)}
+        >
+          <div className="space-y-3">
+            <Campo rotulo="Natureza de operação">
+              <select required value={caixa.natureza_id} onChange={(e) => setCaixa({ ...caixa, natureza_id: e.target.value })} className={INPUT_CLASS}>
+                <option value="">Escolha…</option>
+                {servem.map((n) => <option key={n.id} value={n.id}>{n.descricao}</option>)}
+              </select>
+            </Campo>
+            <Campo rotulo="Cliente">
+              <CampoPesquisa
+                obrigatorio={!nfce}
+                texto={caixa.cliente}
+                vazio={nfce ? 'Consumidor não identificado' : 'Pesquisar cliente…'}
+                onAbrir={() => setPesquisaCliente(true)}
+                onLimpar={() => setCaixa({ ...caixa, pessoa_id: null, cliente: '' })}
+              />
+            </Campo>
+          </div>
+        </ConfirmDialog>
+      )}
+      {caixa && pesquisaCliente && (
+        <PesquisaCatalogo
+          tipo="clientes"
+          titulo="Escolher cliente"
+          onEscolher={(c) => {
+            setPesquisaCliente(false);
+            setCaixa({ ...caixa, pessoa_id: c.id, cliente: `${c.nome}${c.cpf_cnpj ? ` • ${docBr(c.cpf_cnpj)}` : ''}` });
+          }}
+          onFechar={() => setPesquisaCliente(false)}
         />
       )}
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro('')} />}

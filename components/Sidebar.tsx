@@ -4,7 +4,7 @@ import { usePathname, useRouter } from '@/lib/nav';
 import Link from '@/lib/link';
 import {
   FileText, ClipboardList, Receipt, ShoppingBag, Scale, FileCheck2, ExternalLink,
-  LogOut, Menu, X, User, Sun, Moon, ChevronLeft, ChevronRight, ShoppingCart, Users, Contact, type LucideIcon,
+  LogOut, Menu, X, User, Sun, Moon, ChevronLeft, ChevronRight, ShoppingCart, Users, Contact, Inbox, type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { fecharNoMaster } from '@/lib/origemMaster';
@@ -23,6 +23,7 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
     itens: [
       { name: 'Orçamentos', icon: FileText, href: '/orcamentos' },
       { name: 'Pedidos', icon: ClipboardList, href: '/pedidos' },
+      { name: 'Pedidos do CRM', icon: Inbox, href: '/crm-pedidos' },
       { name: 'Faturar pedidos', icon: Receipt, href: '/faturar' },
       { name: 'Vendas', icon: ShoppingBag, href: '/vendas' },
     ],
@@ -37,7 +38,9 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
   },
   {
     titulo: 'Fiscal',
-    itens: [{ name: 'NFe', icon: FileCheck2, externo: '/api/nfe-link' }],
+    itens: [
+      { name: 'NFe', icon: FileCheck2, externo: '/api/nfe-link' },
+    ],
   },
 ];
 

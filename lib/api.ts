@@ -23,6 +23,9 @@ export function hojeIso(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** Número do DAV (orçamento/pedido) com 10 dígitos, como pede o PAF-NFC-e: 12 → 0000000012 */
+export const numDav = (n: unknown) => (n == null || n === '' ? '' : String(n).padStart(10, '0'));
+
 export const moeda = (v: unknown) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Quantidade com 0 a 4 casas: 2 → 2; 1,5 → 1,5; 0,125 → 0,125 */

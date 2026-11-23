@@ -84,6 +84,8 @@ function lerPessoa(b: any) {
     vendedor_id: idOuNull(b?.vendedor_id),
     tipo_cliente_id: idOuNull(b?.tipo_cliente_id),
     regiao_id: idOuNull(b?.regiao_id),
+    // Coluna do SQL do clube (erp-pdv/extras/2026-11-22_clube_descontos.sql): só vai quando a tela manda
+    ...(b && 'clube_desconto' in b && { clube_desconto: sim('clube_desconto') }),
     bloqueado,
     motivo_bloqueio: bloqueado ? texto('motivo_bloqueio', 'Motivo do bloqueio', 200) : null,
     observacoes: texto('observacoes', 'Observações', 65535),
@@ -91,7 +93,7 @@ function lerPessoa(b: any) {
   };
 }
 
-/** Valida o corpo e o que depende do banco: documento repetido no grupo, vendedor do grupo e a cidade pelo IBGE */
+/** Valida o corpo e o que depende do banco: documento e código repetidos no grupo, vendedor do grupo e a cidade pelo IBGE */
 async function pessoaDaTela(b: any, grupo: number, id?: string) {
   const p = lerPessoa(b);
   if (p.cpf_cnpj) {
@@ -100,6 +102,15 @@ async function pessoaDaTela(b: any, grupo: number, id?: string) {
       [grupo, p.cpf_cnpj, id ?? 0],
     );
     if (outra) falha(`${p.tipo_pessoa === 'F' ? 'CPF' : 'CNPJ'} já cadastrado: ${outra.nome} (#${outra.id}).`);
+  }
+  if (p.codigo) {
+    // Inclui as excluídas: o índice único (grupo_id, codigo) também vale para elas
+    const [[outra]]: any = await pool.query('SELECT id, nome, date_delete FROM cad_pessoas WHERE grupo_id = ? AND codigo = ? AND id <> ? LIMIT 1', [
+      grupo,
+      p.codigo,
+      id ?? 0,
+    ]);
+    if (outra) falha(`Código já usado por ${outra.nome} (#${outra.id}${outra.date_delete ? ', excluída' : ''}).`);
   }
   if (p.vendedor_id) {
     const [[v]]: any = await pool.query('SELECT 1 FROM cad_vendedores v JOIN sys_empresas e ON e.id = v.empresa_id WHERE v.id = ? AND e.grupo_id = ?', [p.vendedor_id, grupo]);

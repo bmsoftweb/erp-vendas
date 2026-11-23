@@ -1,6 +1,6 @@
 // ICMS do item pelo grupo tributário. Rodar:  npx tsx --env-file=.env server/notas.test.ts
 import assert from 'node:assert/strict';
-import { icmsDoItem } from './notas.js';
+import { comST, gtinPublico, icmsDoItem } from './notas.js';
 
 const rot = 'Item 1 (LAMINA)';
 // Grupo "Laminas" do banco: CSOSN 101 com 5% de crédito e CST 00
@@ -20,6 +20,21 @@ erro(() => icmsDoItem({ ...laminas, csosn: null }, true, rot), 'não tem CSOSN, 
 erro(() => icmsDoItem({ ...laminas, cst_icms: null }, false, rot), 'não tem CST do ICMS');
 // Grupo inativo
 erro(() => icmsDoItem({ ...laminas, grupo_ativo: 0 }, true, rot), '"Laminas" está inativo');
+
+// Substituição tributária (CEST obrigatório): CSOSN 500 no Simples, CST 60 no regime normal
+assert.equal(comST({ csosn: '500', cst_icms: '00' }, true), true);
+assert.equal(comST(laminas, true), false);
+assert.equal(comST({ cst_icms: '60' }, false), true);
+
+// GTIN público (Requisito VII, § 3º): o resto vai "SEM GTIN"
+assert.equal(gtinPublico('7891000315507'), '7891000315507');
+assert.equal(gtinPublico('7891000315508'), null); // dígito errado
+assert.equal(gtinPublico('2990000000361'), null); // código interno (prefixo 2xx)
+assert.equal(gtinPublico('0412345678903'), null); // circulação restrita 04x
+assert.equal(gtinPublico('036000291452'), '036000291452'); // GTIN-12
+assert.equal(gtinPublico('20123451'), null); // GTIN-8 restrito
+assert.equal(gtinPublico('17891000315504'), '17891000315504'); // GTIN-14
+assert.equal(gtinPublico('123'), null);
 
 console.log('notas: ok');
 process.exit(0);

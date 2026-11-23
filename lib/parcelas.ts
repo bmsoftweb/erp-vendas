@@ -3,7 +3,20 @@
  * Usado no editor (gera as parcelas) e no servidor (confere a soma). Teste: npx tsx src/utils/parcelas.test.ts
  */
 
-export const FORMAS_PAGAMENTO = ['Boleto', 'PIX', 'Cartão de crédito', 'Cartão de débito', 'Transferência', 'Dinheiro', 'Cheque'];
+/**
+ * Forma de pagamento → tPag, a tabela de meios de pagamento do Portal Nacional da NF-e (PAF-NFC-e, Requisito XI, § 1º).
+ * O nome é o que fica gravado na parcela (até 30 caracteres); os 7 primeiros são os de antes, para as parcelas antigas.
+ * A mesma tabela está no server/menuFiscal.ts do erp-pdv (TPAG_VENDAS, registro A2): mudar lá também.
+ */
+export const TPAG: Record<string, string> = {
+  Boleto: '15', PIX: '17', 'Cartão de crédito': '03', 'Cartão de débito': '04', Transferência: '18', Dinheiro: '01', Cheque: '02',
+  'Cartão da loja': '05', 'Vale alimentação': '10', 'Vale refeição': '11', 'Vale presente': '12', 'Vale combustível': '13',
+  'Depósito bancário': '16', 'Fidelidade / cashback': '19', 'PIX estático': '20', 'Crédito em loja': '21',
+  'Pagamento eletrônico': '22', Outros: '99',
+  // Só a NFC-e automática dos 180 dias (vendas.ts); não aparece na escolha da tela
+  'Sem pagamento': '90',
+};
+export const FORMAS_PAGAMENTO = Object.keys(TPAG).filter((f) => f !== 'Sem pagamento');
 
 export interface Parcela {
   numero: number;

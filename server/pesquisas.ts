@@ -30,7 +30,13 @@ export function createPesquisasRouter() {
     if (proprio) {
       try {
         const q = aplicarModelo(proprio, ...args);
-        return (await executarLeitura(pool, q.sql, q.params))[0];
+        const [linhas]: any = await executarLeitura(pool, q.sql, q.params);
+        // IAT do produto para o total da tela bater com o servidor (Requisito VII): o SQL próprio pode não trazer
+        if (req.params.tipo === 'produtos' && linhas.length && !('iat' in linhas[0])) {
+          const [iats]: any = await pool.query('SELECT id, iat FROM cad_produtos WHERE id IN (?)', [linhas.map((l: any) => l.id)]);
+          for (const l of linhas) l.iat = iats.find((x: any) => x.id === Number(l.id))?.iat ?? null;
+        }
+        return linhas;
       } catch (err) {
         console.error(`SQL próprio da pesquisa de ${req.params.tipo} (grupo ${grupoDa(s)}) falhou; usando o padrão:`, err);
       }

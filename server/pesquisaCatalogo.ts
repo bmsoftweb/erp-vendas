@@ -107,6 +107,8 @@ export const CATALOGOS: Record<string, Catalogo> = {
         label: 'Imagem', formato: 'imagem', alinhar: 'centro', largura: 80, visivel: true,
         sql: '(SELECT i.url FROM cad_produtos_imagens i WHERE i.produto_id = pr.id ORDER BY i.principal DESC, i.variante_id IS NOT NULL, i.ordem, i.id LIMIT 1)',
       },
+      // Código oficial do produto sem EAN (cProd, P2, D5): o id (Requisito VIII, I)
+      id: { label: 'Código', sql: 'pr.id', usa: 'cad_produtos.id', largura: 80, alinhar: 'numero', visivel: true, busca: 'igual', buscaPadrao: true },
       nome: { label: 'Produto', sql: 'pr.nome', usa: 'cad_produtos.nome', largura: 280, visivel: true, busca: 'contem', buscaPadrao: true },
       sku: { label: 'SKU', sql: 'pr.sku', usa: 'cad_produtos.sku', largura: 110, visivel: true, busca: 'inicio', buscaPadrao: true },
       codigo_barras: { label: 'Cód. barras', sql: 'pr.codigo_barras', usa: 'cad_produtos.codigo_barras', largura: 130, busca: 'igual', buscaPadrao: true },
@@ -122,6 +124,7 @@ export const CATALOGOS: Record<string, Catalogo> = {
            JOIN cad_produtos_localizacoes lc ON lc.id = s.localizacao_id
           WHERE l.produto_id = pr.id AND lc.empresa_id = ?)`,
       },
+      iat: { label: 'IAT', sql: 'pr.iat', usa: 'cad_produtos.iat', alinhar: 'centro', largura: 50 },
       preco_venda: { label: 'Preço', sql: 'pr.preco_venda', usa: 'cad_produtos.preco_venda', formato: 'moeda', alinhar: 'numero', largura: 100, visivel: true },
     },
   },

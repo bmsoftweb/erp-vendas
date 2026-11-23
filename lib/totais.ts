@@ -6,12 +6,17 @@ export interface ItemValor {
   quantidade: number | string;
   preco_unitario: number | string;
   valor_desconto?: number | string | null;
+  /** IAT do produto (Requisito VII, VIII): 'T' trunca o bruto nos centavos; o resto arredonda */
+  iat?: string | null;
 }
 
 const centavos = (v: number) => Math.round(v * 100 + (v >= 0 ? 1e-7 : -1e-7));
 
-/** Bruto do item (quantidade × preço) em centavos; quantidade e preço têm até 4 casas */
-export const brutoItem = (i: ItemValor) => centavos(Number(i.quantidade || 0) * Number(i.preco_unitario || 0));
+/** Bruto do item (quantidade × preço) em centavos; quantidade e preço têm até 4 casas. IAT 'T' trunca */
+export const brutoItem = (i: ItemValor) => {
+  const v = Number(i.quantidade || 0) * Number(i.preco_unitario || 0);
+  return String(i.iat ?? '').toUpperCase() === 'T' ? Math.floor(v * 100 + 1e-6) : centavos(v);
+};
 
 /** Total do item em reais: bruto − desconto */
 export const totalItem = (i: ItemValor) => (brutoItem(i) - centavos(Number(i.valor_desconto || 0))) / 100;
@@ -32,5 +37,9 @@ if (typeof process !== 'undefined' && process.argv[1]?.replace(/\\/g, '/').endsW
   ok(totalItem({ quantidade: 1.5, preco_unitario: 33.3333, valor_desconto: 0.5 }), 49.5, '1,5 × 33,3333 − 0,50');
   ok(totais([{ quantidade: 2, preco_unitario: 10.005 }, { quantidade: 1, preco_unitario: 5, valor_desconto: 1 }], 7.5),
     { valor_produtos: 25.01, valor_desconto: 1, valor_frete: 7.5, valor_total: 31.51 }, 'pedido com frete');
+  // IAT: 1,235 × 3,99 = 4,92765 → arredonda 4,93, trunca 4,92
+  ok(totalItem({ quantidade: 1.235, preco_unitario: 3.99 }), 4.93, 'IAT A');
+  ok(totalItem({ quantidade: 1.235, preco_unitario: 3.99, iat: 'T' }), 4.92, 'IAT T');
+  ok(totalItem({ quantidade: 3, preco_unitario: 0.1, iat: 'T' }), 0.3, '3 × 0,10 truncado');
   console.log('totais: ok');
 }

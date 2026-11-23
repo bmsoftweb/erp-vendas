@@ -3,6 +3,8 @@ import express from 'express';
 import http from 'node:http';
 import path from 'node:path';
 import { createApp } from './server/app.js';
+import { agendarDav180 } from './server/dav180.js';
+import { agendarContingencia } from './server/notas.js';
 
 /**
  * Servidor local: a API (server/app.ts) e, por cima, o Vite (desenvolvimento) ou a pasta dist (produção).
@@ -25,6 +27,9 @@ async function main() {
 
   const porta = Number(process.env.PORT) || 3000;
   servidor.listen(porta, '0.0.0.0', () => console.log(`bm-vendas em http://localhost:${porta}`));
+  // NFC-e dos pedidos em aberto há mais de 180 dias (na Vercel quem chama é o cron do vercel.json)
+  agendarDav180();
+  agendarContingencia();
 }
 
 main().catch((e) => {

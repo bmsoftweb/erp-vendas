@@ -2,6 +2,17 @@
 
 Mais recente primeiro. PATCH a cada envio ao GitHub; MAJOR/MINOR só quando pedido.
 
+## 0.1.6 — 2026-11-23
+
+- PAF-NFC-e (Ato DIAT 54/2026 e RICMS/SC Anexo 11), adequações da auditoria:
+  - Requisição externa (pedidos do CRM), DAV de 180 dias com NFC-e automática e impressão do DAV com código GTIN ou id.
+  - Modelo da nota automático, inclusive a NF-e a partir de R$ 200.000,00 (art. 96 § 7º): telas, Faturar e DAV de 180 dias escolhem sozinhos a natureza de venda do modelo certo.
+  - DAV que já teve DF-e (mesmo cancelado) não é alterado nem reimpresso; item removido fica cancelado com o número (script `extras/2026-11-23_dav_itens_cancelado.sql`, rodar antes de usar).
+  - Data de emissão e validade pelo servidor; unidade e descrição do cadastro; IAT (truncamento) no DAV, na venda e no Faturar.
+  - Nota: GTIN só público (senão "SEM GTIN"), recusa grupo sem IBS/CBS e ST sem CEST, intermediador obrigatório, EConf só eletrônico, DANFE de contingência em duas vias, aviso de NF-e de estorno.
+  - Aviso "MENU FISCAL INACESSÍVEL NESTA TELA" em todas as telas.
+- Pessoas: clube de descontos no cadastro e código único no grupo.
+
 ## 0.1.5 — 2026-11-21
 
 - Naturezas de operação: botão "Naturezas padrão" cria as mais comuns da NF-e com o CFOP dentro e fora do estado (as que já existem com o mesmo nome ficam como estão).

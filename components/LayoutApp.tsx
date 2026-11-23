@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '@/components/Sidebar';
 import { TelaHeader } from '@/components/TelaHeader';
 import { RodapeSistema } from '@/components/RodapeSistema';
+import { AvisoErro } from '@/components/AvisoErro';
 
 /**
  * Casca das telas logadas, como no Romaneio e no crmWeb: menu, cabeçalho e barra de status ficam aqui, uma vez só,
@@ -16,6 +17,7 @@ const TELAS: Record<string, { titulo: string; subtitulo: string; semCabecalho?: 
   '/vendas': { titulo: 'Vendas', subtitulo: 'Faturamento: cada venda vira uma nota' },
   '/naturezas': { titulo: 'Naturezas de operação', subtitulo: 'Documento fiscal, finalidade e CFOP de cada tipo de venda' },
   '/pessoas': { titulo: 'Pessoas', subtitulo: 'Clientes, fornecedores e transportadoras do grupo de empresas' },
+  '/crm-pedidos': { titulo: 'Pedidos do CRM', subtitulo: 'Pedidos aprovados no CRM: recebidos como requisição externa, viram pedido de venda' },
   '/vendedores': { titulo: 'Vendedores', subtitulo: 'Quem vende: aparece nos orçamentos, pedidos e vendas' },
 };
 
@@ -51,6 +53,25 @@ export const LayoutApp: React.FC = () => {
       .catch(() => {});
   }, []);
 
+  // Fila das NFC-e em contingência (PAF-NFC-e, Requisito III, II): enquanto o app está aberto, a cada minuto.
+  // Na Vercel não há processo fixo; no servidor local o agendarContingencia também transmite sozinho.
+  // NFC-e normal que passou do prazo de cancelar pede NF-e de estorno (Anexo 11, art. 106): aviso âmbar a cada minuto
+  // enquanto o erp-nfe devolver estorno pendente (o servidor chama mesmo sem venda em contingência)
+  const [estorno, setEstorno] = useState('');
+  useEffect(() => {
+    const rodar = () => void fetch('/api/nfce/contingencia', { method: 'POST' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => {
+        if (!r) return;
+        const lista: { numero: number; chave: string }[] = r.estornos ?? [];
+        setEstorno(lista.length ? `Emita NF-e de estorno (Anexo 11, art. 106) para a(s) NFC-e ${lista.map((e) => `nº ${e.numero} (${e.chave})`).join(', ')}: a tentativa normal foi autorizada junto com a contingência e passou do prazo de cancelamento.` : '');
+      })
+      .catch(() => {});
+    rodar();
+    const id = setInterval(rodar, 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const tela = TELAS[pathname] ?? { titulo: '', subtitulo: '' };
   return (
     <RefreshCtx.Provider value={{ registrar }}>
@@ -64,6 +85,7 @@ export const LayoutApp: React.FC = () => {
           <RodapeSistema />
         </div>
       </div>
+      {estorno && <AvisoErro mensagem={estorno} tom="alerta" onFechar={() => setEstorno('')} />}
     </RefreshCtx.Provider>
   );
 };

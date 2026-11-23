@@ -13,6 +13,8 @@ createRoot(document.getElementById('root')!).render(
       <ThemeProvider>
         <App />
         <Dica />
+        {/* PAF único: o Menu Fiscal fica no caixa (erp-pdv); aviso fixo por cima dos modais (Requisito VI, § 1º) */}
+        <p className="fixed bottom-1 right-2 z-[999] text-[10px] font-black tracking-widest text-stone-400 pointer-events-none print:hidden">MENU FISCAL INACESSÍVEL NESTA TELA</p>
       </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>,
