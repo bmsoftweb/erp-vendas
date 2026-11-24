@@ -2,6 +2,13 @@
 
 Mais recente primeiro. PATCH a cada envio ao GitHub; MAJOR/MINOR só quando pedido.
 
+## 0.1.7 — 2026-11-23
+
+- Custo médio nas saídas: as baixas de estoque gravam `custo_medio` e `estoque_valor` no movimento, mantendo o médio da filial (mesma conta do erp-compras).
+- Pesquisa do catálogo ganha "Fornecedores" (`cad_pessoas.is_fornecedor = 1`), usada pelo erp-compras.
+- Pesquisa: Enter digitado logo depois do texto espera a busca terminar e pega o item certo.
+- Nome "ERP-Master" no lugar de "BM-Master" em mensagens e comentários.
+
 ## 0.1.6 — 2026-11-23
 
 - PAF-NFC-e (Ato DIAT 54/2026 e RICMS/SC Anexo 11), adequações da auditoria:

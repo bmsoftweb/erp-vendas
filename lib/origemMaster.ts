@@ -1,4 +1,4 @@
-// Estoque aberto pelo BM-Master (entrada automática, /api/entrar → /?master=1): ao Sair, fecha a aba do Master em
+// Estoque aberto pelo ERP-Master (entrada automática, /api/entrar → /?master=1): ao Sair, fecha a aba do Master em
 // vez de ir para o login. Marca guardada no sessionStorage desta aba; aberto direto, o Sair segue normal.
 const CHAVE = 'bm_origem_master';
 

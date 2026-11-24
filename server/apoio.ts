@@ -18,7 +18,7 @@ export function createApoioRouter() {
     const [[cfg]]: any = await pool.query('SELECT natureza_padrao_id, validade_orcamento_dias FROM ven_config WHERE empresa_id = ?', [e]);
     // Vendedor ligado ao usuário logado: já vem escolhido no orçamento/pedido novo
     const vendedorPadrao = vendedores.find((v: any) => s.userId && Number(v.usuario_id) === Number(s.userId))?.id ?? null;
-    // Usuário de balcão (sys_usuarios.balcao, marcado no bm-master): pedido novo já como pré-venda.
+    // Usuário de balcão (sys_usuarios.balcao, marcado no erp-master): pedido novo já como pré-venda.
     // SELECT * para não quebrar o apoio num banco ainda sem a coluna
     const [[u]]: any = await pool.query('SELECT * FROM sys_usuarios WHERE id = ?', [s.userId ?? 0]);
     return { naturezas, condicoes, vendedores, intermediadores, vendedorPadrao, prevendaPadrao: !!Number(u?.balcao), naturezaPadrao: cfg?.natureza_padrao_id ?? null, validadeDias: cfg?.validade_orcamento_dias ?? 7 };

@@ -105,7 +105,7 @@ export default function Sidebar({ userName }: SidebarProps) {
       {/* Marca: mesma altura do header das telas */}
       <div className={`h-[var(--altura-topo)] shrink-0 ${rec ? 'justify-center' : 'px-4 justify-between'} border-b border-stone-200 dark:border-stone-800/80 flex items-center gap-3 bg-stone-50/50 dark:bg-transparent`}>
         <div className="flex items-center gap-3 min-w-0">
-          {/* Ícone e cor do Vendas, iguais aos do card e da aba no BM-Master (src/utils/apps.ts de lá) */}
+          {/* Ícone e cor do Vendas, iguais aos do card e da aba no ERP-Master (src/utils/apps.ts de lá) */}
           <div className="w-9 h-9 rounded-xl bg-orange-600 text-white flex items-center justify-center shadow-md shrink-0">
             <ShoppingCart className="w-5 h-5" />
           </div>

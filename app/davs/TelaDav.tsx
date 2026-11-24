@@ -218,7 +218,7 @@ export default function TelaDav({ tipo }: { tipo: Tipo }) {
       pessoa_id: null, vendedor_id: apoio.vendedorPadrao ?? (apoio.vendedores.length === 1 ? apoio.vendedores[0].id : ''),
       condicao_pagamento_id: '', data_emissao: hoje, validade: tipo === 'orcamento' ? somarDias(hoje, apoio.validadeDias) : null,
       modalidade_frete: 9, transportadora_id: null, valor_frete: 0, observacoes: '', informacoes_complementares: '', itens: [], parcelas: [],
-      // Usuário de balcão (cadastro de usuários do bm-master): o pedido novo já nasce pré-venda
+      // Usuário de balcão (cadastro de usuários do erp-master): o pedido novo já nasce pré-venda
       prevenda: tipo === 'pedido' && apoio.prevendaPadrao,
     });
   };

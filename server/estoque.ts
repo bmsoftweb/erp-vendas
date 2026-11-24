@@ -14,6 +14,7 @@ import { masterPool as pool } from './db.js';
  *   o lote "0" se não houver) na primeira localização física da filial. Filial sem localização: não baixa.
  * - Nota cancelada, rejeitada ou denegada que tinha baixado volta ao estoque (estornarCancelados), venha o cancelamento
  *   do caixa, do erp-vendas ou da tela do erp-nfe.
+ * - custo_medio e estoque_valor por produto + variante + filial, na conta do erp-compras: a saída mantém o médio.
  * - Datas pelo NOW() do MySQL: o pool fixa a sessão em -03:00 (Brasília).
  * ponytail: só a nota de saída; NF-e de devolução/estorno (entrada) não movimenta, acrescentar quando o PAF emitir.
  */
@@ -51,13 +52,45 @@ async function localDoItem(c: any, empresa: number, it: ItemBaixa) {
   return { lote_id: lote.lote_id, localizacao_id: loc.id, preco_custo: lote.preco_custo };
 }
 
+const casas = (v: number, c: number) => Math.round(v * 10 ** c) / 10 ** c;
+
+/**
+ * Saldo e custo médio do produto na filial (produto + variante, lotes e localizações não virtuais somados), com o
+ * produto e as linhas de saldo travados. Mesma conta do erp-compras (server/estoque.ts de lá): médio = o do último
+ * movimento da filial com a coluna; sem nenhum, o preco_custo do lote.
+ */
+async function posicao(c: any, empresa: number, produto: number, variante: number | null, custoLote: unknown) {
+  await c.query('SELECT id FROM cad_produtos WHERE id = ? FOR UPDATE', [produto]);
+  const [saldos]: any = await c.query(
+    `SELECT s.quantidade FROM est_estoque_saldo s
+       JOIN cad_produtos_lotes l ON l.id = s.lote_id
+       JOIN cad_produtos_localizacoes lc ON lc.id = s.localizacao_id
+      WHERE l.produto_id = ? AND COALESCE(l.variante_id, 0) = ? AND lc.empresa_id = ? AND lc.tipo <> 'virtual'
+      FOR UPDATE`,
+    [produto, variante ?? 0, empresa],
+  );
+  const [[mov]]: any = await c.query(
+    `SELECT custo_medio FROM est_estoque_movimentacoes
+      WHERE empresa_id = ? AND produto_id = ? AND COALESCE(variante_id, 0) = ? AND custo_medio IS NOT NULL
+      ORDER BY id DESC LIMIT 1`,
+    [empresa, produto, variante ?? 0],
+  );
+  const qtd = saldos.reduce((s: number, x: any) => s + Number(x.quantidade), 0);
+  return { qtd, medio: mov ? Number(mov.custo_medio) : Number(custoLote) > 0 ? Number(custoLote) : null };
+}
+
 async function mover(c: any, empresa: number, tipo: 'saida' | 'entrada', lote: number, loc: number, q: number, custo: unknown,
   docId: number, produto: number, variante: number | null, usuario: string, obs: string) {
+  // A venda não muda o médio; a volta da nota cancelada entra pelo custo com que saiu. Sem médio conhecido, fica sem valor.
+  const p = await posicao(c, empresa, produto, variante, custo);
+  let medio = p.medio;
+  if (tipo === 'entrada' && Number(custo) > 0) medio = p.qtd <= 0 || medio === null ? Number(custo) : casas((p.qtd * medio + q * Number(custo)) / (p.qtd + q), 6);
+  const valor = medio === null ? null : casas((p.qtd + (tipo === 'saida' ? -q : q)) * medio, 2);
   await c.query(
     `INSERT INTO est_estoque_movimentacoes (empresa_id, tipo, lote_id, localizacao_orig_id, localizacao_dest_id, quantidade, custo_unitario,
-       referencia_tipo, referencia_id, produto_id, variante_id, usuario, observacao, date_insert)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-    [empresa, tipo, lote, tipo === 'saida' ? loc : null, tipo === 'entrada' ? loc : null, q, Number(custo) || null,
+       estoque_valor, custo_medio, referencia_tipo, referencia_id, produto_id, variante_id, usuario, observacao, date_insert)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+    [empresa, tipo, lote, tipo === 'saida' ? loc : null, tipo === 'entrada' ? loc : null, q, Number(custo) || null, valor, medio,
       REF, docId, produto, variante || null, (usuario || 'Sistema').slice(0, 100), obs],
   );
   await c.query(

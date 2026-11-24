@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Package branco sobre o verde do Estoque (emerald-600), igual ao card do Estoque no BM-Master -->
+  <!-- Package branco sobre o verde do Estoque (emerald-600), igual ao card do Estoque no ERP-Master -->
   <rect width="64" height="64" rx="14" fill="#059669"/>
   <g transform="translate(14 14) scale(1.5)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/>

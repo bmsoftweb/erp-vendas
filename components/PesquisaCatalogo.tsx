@@ -27,7 +27,7 @@ interface CampoCatalogo {
 }
 
 interface Props {
-  tipo: 'produtos' | 'clientes' | 'transportadoras';
+  tipo: 'produtos' | 'clientes' | 'transportadoras' | 'fornecedores';
   titulo: string;
   placeholder?: string;
   /** Filtros extras do catálogo (ex.: "servico=0") */
@@ -70,6 +70,14 @@ export function PesquisaCatalogo({ tipo, titulo, placeholder, filtros, onEscolhe
   const linhas = busca.itens;
 
   useEffect(() => setDestaque(0), [linhas]);
+
+  // Enter antes de a busca do que foi digitado voltar escolhe a primeira linha quando ela chegar, não a da lista antiga
+  const enterPendente = useRef(false);
+  useEffect(() => {
+    if (busca.carregando || !enterPendente.current) return;
+    enterPendente.current = false;
+    if (linhas[0]) onEscolher(linhas[0]);
+  }, [busca.carregando, linhas, onEscolher]);
 
   // Esc fecha primeiro o que estiver aberto por cima (lista de campos, menu da lista), depois o modal
   useEffect(() => {
@@ -121,7 +129,10 @@ export function PesquisaCatalogo({ tipo, titulo, placeholder, filtros, onEscolhe
               type="text"
               placeholder={placeholder ?? ativos.map((k) => campos.find((c) => c.key === k)?.label).join(', ') + '…'}
               onFocus={(e) => e.target.select()}
-              onChange={(e) => busca.buscar(e.target.value)}
+              onChange={(e) => {
+                enterPendente.current = false;
+                busca.buscar(e.target.value);
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'ArrowDown') {
                   e.preventDefault();
@@ -131,7 +142,8 @@ export function PesquisaCatalogo({ tipo, titulo, placeholder, filtros, onEscolhe
                   setDestaque((d) => Math.max(d - 1, 0));
                 } else if (e.key === 'Enter') {
                   e.preventDefault();
-                  if (linhas[destaque]) onEscolher(linhas[destaque]);
+                  if (busca.carregando) enterPendente.current = true;
+                  else if (linhas[destaque]) onEscolher(linhas[destaque]);
                 }
               }}
               className={INPUT_CLASS + ' pl-8'}
