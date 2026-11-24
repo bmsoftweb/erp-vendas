@@ -2,6 +2,10 @@
 
 Mais recente primeiro. PATCH a cada envio ao GitHub; MAJOR/MINOR só quando pedido.
 
+## 0.1.9 — 2026-11-24
+
+- Barras de rolagem no tom do tema (no escuro a nativa ficava branca).
+
 ## 0.1.8 — 2026-11-23
 
 - Marca BM na tela: mensagens e textos citam o "BM-Master" (no lugar de "ERP-Master").
