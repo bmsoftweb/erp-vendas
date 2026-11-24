@@ -11,7 +11,7 @@ import type { Pool } from 'mysql2/promise';
  * Mudou aqui, copie para os outros. Não importa nada de nenhum dos apps.
  *
  * O catálogo é a lista fechada de colunas que a tela pode mostrar e de campos em que pode pesquisar: a tela só manda
- * chaves, e o SQL sai daqui. O suporte cadastra campos por grupo no ERP-Master (ven_pesquisa_campos):
+ * chaves, e o SQL sai daqui. O suporte cadastra campos por grupo no BM-Master (ven_pesquisa_campos):
  *   - linha sem tabela = campo do sistema (chave do catálogo): muda nome, pesquisa e "no grid"; inativa, sai da pesquisa;
  *   - linha com tabela = campo extra, só das `tabelas` do catálogo e de colunas que existem no banco.
  */
@@ -214,7 +214,7 @@ export function condicaoBusca(cat: Pick<Catalogo, 'campos'>, busca: string, chav
 }
 
 /**
- * SQL da pesquisa como modelo, o mesmo que o suporte vê e edita no ERP-Master:
+ * SQL da pesquisa como modelo, o mesmo que o suporte vê e edita no BM-Master:
  *   :empresa  → a filial do usuário (vira parâmetro)
  *   {filtros} → filtros da tela (ex.: produto × serviço)
  *   {busca}   → uma condição por palavra digitada, nos campos escolhidos em "Pesquisar em"
@@ -259,7 +259,7 @@ export const montarConsulta = <E>(cat: Catalogo, busca: string, chaves: string[]
   aplicarModelo(modeloSql(cat), cat, busca, chaves, filtrosTela, empresa);
 
 /**
- * SQL próprio do grupo (sys_grupos.config → pesquisas_sql.<pesquisa>, gravado pelo suporte no ERP-Master).
+ * SQL próprio do grupo (sys_grupos.config → pesquisas_sql.<pesquisa>, gravado pelo suporte no BM-Master).
  * Só um SELECT, sem `;` nem `?` (a filial é :empresa), sem gravar arquivo e sem colunas de senha/token;
  * roda numa transação somente leitura (executarLeitura). Texto do erro, ou null se serve.
  */

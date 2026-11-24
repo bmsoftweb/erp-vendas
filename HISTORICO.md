@@ -2,6 +2,10 @@
 
 Mais recente primeiro. PATCH a cada envio ao GitHub; MAJOR/MINOR só quando pedido.
 
+## 0.1.8 — 2026-11-23
+
+- Marca BM na tela: mensagens e textos citam o "BM-Master" (no lugar de "ERP-Master").
+
 ## 0.1.7 — 2026-11-23
 
 - Custo médio nas saídas: as baixas de estoque gravam `custo_medio` e `estoque_valor` no movimento, mantendo o médio da filial (mesma conta do erp-compras).
