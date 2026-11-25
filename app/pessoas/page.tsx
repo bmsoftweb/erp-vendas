@@ -272,6 +272,9 @@ export default function PessoasPage() {
               <Campo rotulo="Clube de descontos" dica="Associado: no PDV, com o CPF dele na venda, os itens saem pelo preço das listas de preço do clube (erp-estoque).">
                 <Toggle checked={!!Number(form.clube_desconto)} onChange={(v) => muda('clube_desconto', v ? 1 : 0)} />
               </Campo>
+              <Campo rotulo="Liberado no B2B" dica="Pode comprar pelo portal B2B (os compradores são cadastrados no admin do B2B).">
+                <Toggle checked={!!Number(form.b2b_liberado)} onChange={(v) => muda('b2b_liberado', v ? 1 : 0)} />
+              </Campo>
               <Campo rotulo="Bloqueado">
                 <Toggle checked={!!Number(form.bloqueado)} onChange={(v) => muda('bloqueado', v ? 1 : 0)} />
               </Campo>

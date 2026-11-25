@@ -789,32 +789,32 @@ export default function TelaDav({ tipo }: { tipo: Tipo }) {
             <>
               {['aberta', 'rejeitada', 'faturando'].includes(r.status) ? <BotaoAcao icone={FileCheck2} titulo="Emitir nota" descricao={`Emite a ${DOC[r.documento]} pelo ${r.documento === 'nfse' ? 'erp-nfs' : 'erp-nfe'} (pede confirmação)`} tom="verde" onClick={() => emitir(r)} />
                 : r.status === 'faturada' && r.documento !== 'nfse' ? <BotaoAcao icone={Printer} titulo="Imprimir DANFE" descricao={`Abre o DANFE da ${DOC[r.documento]} em PDF numa aba nova`} onClick={() => danfe(r)} />
-                : <Vazio />}
+                : <Vazio icone={FileCheck2} titulo="Emitir nota" />}
               {aberto(r) ? <BotaoAcao icone={Ban} titulo="Cancelar" descricao="Cancela a venda sem nota; o saldo volta aos pedidos" tom="perigo" onClick={() => executar('Cancelar venda', `Cancelar a venda ${r.numero}?${r.pedidos ? ` Os itens voltam a ficar a faturar no(s) pedido(s) ${r.pedidos}.` : ''}`, 'Cancelar venda', `/api/vendas/${r.id}/cancelar`, 'POST', true, () => setOk(`Venda ${r.numero} cancelada.`))} />
                 : r.status === 'faturada' && r.situacao_nota === 'autorizada' ? <BotaoAcao icone={HandCoins} titulo="Conciliação financeira" descricao={`Envia à SEFAZ o evento EConf com os pagamentos já vencidos da ${DOC[r.documento]}`} onClick={() => executar('Conciliação financeira', `Enviar a conciliação financeira (EConf) dos pagamentos já vencidos da ${DOC[r.documento]} da venda ${r.numero}?`, 'Enviar EConf', `/api/vendas/${r.id}/econf`, 'POST', false, (x) => setOk(`EConf registrado: ${x.motivo}`))} />
-                : <Vazio />}
+                : <Vazio icone={Ban} titulo="Cancelar" />}
               {r.status === 'faturada' && r.documento !== 'nfse' && ['autorizada', 'cancelada'].includes(r.situacao_nota)
-                ? <BotaoAcao icone={XCircle} titulo="Cancelar nota" descricao={`Cancela a ${DOC[r.documento]} na SEFAZ (pede a justificativa); a venda fica cancelada e os itens voltam aos pedidos e ao estoque`} tom="perigo" onClick={() => setCancelaNota({ r, justificativa: '' })} />
-                : <Vazio />}
+                ? <BotaoAcao icone={XCircle} titulo="Cancelar nota" rotulo="Canc. NF" descricao={`Cancela a ${DOC[r.documento]} na SEFAZ (pede a justificativa); a venda fica cancelada e os itens voltam aos pedidos e ao estoque`} tom="perigo" onClick={() => setCancelaNota({ r, justificativa: '' })} />
+                : <Vazio icone={XCircle} titulo="Cancelar nota" rotulo="Canc. NF" />}
               <SeparadorAcoes />
               <BotaoAcao icone={aberto(r) || r.status === 'rejeitada' ? Pencil : Eye} titulo={aberto(r) || r.status === 'rejeitada' ? 'Editar' : 'Consultar'} descricao="Abre a venda" onClick={() => abrir(r.id)} />
             </>
           ) : tipo === 'orcamento' ? (
             <>
-              {aberto(r) ? <BotaoAcao icone={CheckCircle2} titulo="Aprovar" descricao="Gera um pedido com os mesmos itens" tom="verde" onClick={() => executar('Aprovar orçamento', `Aprovar o orçamento ${num(r.numero)}? Será gerado um pedido com os mesmos itens e parcelas.`, 'Aprovar e gerar pedido', `/api/davs/${r.id}/aprovar`, 'POST', false, (p) => setOk(`Pedido ${num(p.numero)} gerado.`))} /> : <Vazio />}
-              {aberto(r) ? <BotaoAcao icone={XCircle} titulo="Recusar" descricao="O cliente não aceitou" onClick={() => setBaixa({ r, motivo: '', recusa: true })} /> : <Vazio />}
-              {Number(r.com_nota) ? <Vazio /> : <BotaoAcao icone={Printer} titulo="Imprimir" descricao="Abre o orçamento para imprimir numa aba nova (com nota do pedido gerado não se reimprime)" onClick={() => imprimir(r)} />}
-              {Number(r.com_nota) ? <Vazio /> : <BotaoAcao icone={Copy} titulo="Duplicar" descricao="Novo orçamento com os mesmos dados (com nota não se gera de novo)" onClick={() => abrir(r.id, true)} />}
-              {aberto(r) ? <BotaoAcao icone={Archive} titulo="Baixar" descricao="Encerra o orçamento sem venda; ele continua na lista como baixado" tom="perigo" onClick={() => setBaixa({ r, motivo: '' })} /> : <Vazio />}
+              {aberto(r) ? <BotaoAcao icone={CheckCircle2} titulo="Aprovar" descricao="Gera um pedido com os mesmos itens" tom="verde" onClick={() => executar('Aprovar orçamento', `Aprovar o orçamento ${num(r.numero)}? Será gerado um pedido com os mesmos itens e parcelas.`, 'Aprovar e gerar pedido', `/api/davs/${r.id}/aprovar`, 'POST', false, (p) => setOk(`Pedido ${num(p.numero)} gerado.`))} /> : <Vazio icone={CheckCircle2} titulo="Aprovar" />}
+              {aberto(r) ? <BotaoAcao icone={XCircle} titulo="Recusar" descricao="O cliente não aceitou" onClick={() => setBaixa({ r, motivo: '', recusa: true })} /> : <Vazio icone={XCircle} titulo="Recusar" />}
+              {Number(r.com_nota) ? <Vazio icone={Printer} titulo="Imprimir" /> : <BotaoAcao icone={Printer} titulo="Imprimir" descricao="Abre o orçamento para imprimir numa aba nova (com nota do pedido gerado não se reimprime)" onClick={() => imprimir(r)} />}
+              {Number(r.com_nota) ? <Vazio icone={Copy} titulo="Duplicar" /> : <BotaoAcao icone={Copy} titulo="Duplicar" descricao="Novo orçamento com os mesmos dados (com nota não se gera de novo)" onClick={() => abrir(r.id, true)} />}
+              {aberto(r) ? <BotaoAcao icone={Archive} titulo="Baixar" descricao="Encerra o orçamento sem venda; ele continua na lista como baixado" tom="perigo" onClick={() => setBaixa({ r, motivo: '' })} /> : <Vazio icone={Archive} titulo="Baixar" />}
               <SeparadorAcoes />
               <BotaoAcao icone={aberto(r) ? Pencil : Eye} titulo={aberto(r) ? 'Editar' : 'Consultar'} descricao="Abre o orçamento" onClick={() => abrir(r.id)} />
             </>
           ) : (
             // Posições fixas: Imprimir, Duplicar, Baixar | Editar/Consultar (a que não vale vira espaço). DAV não se exclui (PAF-NFC-e)
             <>
-              {Number(r.com_nota) ? <Vazio /> : <BotaoAcao icone={Printer} titulo="Imprimir" descricao="Abre o pedido para imprimir numa aba nova (com nota autorizada não se reimprime)" onClick={() => imprimir(r)} />}
-              {Number(r.com_nota) ? <Vazio /> : <BotaoAcao icone={Copy} titulo="Duplicar" descricao="Novo pedido com os mesmos dados (com nota não se gera de novo: roteiro, Teste 32)" onClick={() => abrir(r.id, true)} />}
-              {aberto(r) ? <BotaoAcao icone={Archive} titulo="Baixar" descricao="Encerra o pedido sem venda; ele continua na lista como baixado" tom="perigo" onClick={() => setBaixa({ r, motivo: '' })} /> : <Vazio />}
+              {Number(r.com_nota) ? <Vazio icone={Printer} titulo="Imprimir" /> : <BotaoAcao icone={Printer} titulo="Imprimir" descricao="Abre o pedido para imprimir numa aba nova (com nota autorizada não se reimprime)" onClick={() => imprimir(r)} />}
+              {Number(r.com_nota) ? <Vazio icone={Copy} titulo="Duplicar" /> : <BotaoAcao icone={Copy} titulo="Duplicar" descricao="Novo pedido com os mesmos dados (com nota não se gera de novo: roteiro, Teste 32)" onClick={() => abrir(r.id, true)} />}
+              {aberto(r) ? <BotaoAcao icone={Archive} titulo="Baixar" descricao="Encerra o pedido sem venda; ele continua na lista como baixado" tom="perigo" onClick={() => setBaixa({ r, motivo: '' })} /> : <Vazio icone={Archive} titulo="Baixar" />}
               <SeparadorAcoes />
               <BotaoAcao icone={aberto(r) ? Pencil : Eye} titulo={aberto(r) ? 'Editar' : 'Consultar'} descricao="Abre o pedido" onClick={() => abrir(r.id)} />
             </>

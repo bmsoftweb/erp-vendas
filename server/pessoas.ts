@@ -86,6 +86,8 @@ function lerPessoa(b: any) {
     regiao_id: idOuNull(b?.regiao_id),
     // Coluna do SQL do clube (erp-pdv/extras/2026-11-22_clube_descontos.sql): só vai quando a tela manda
     ...(b && 'clube_desconto' in b && { clube_desconto: sim('clube_desconto') }),
+    // Coluna do SQL do B2B (erp-b2b/extras/2026-11-24_b2b_cliente_liberado.sql): só vai quando a tela manda
+    ...(b && 'b2b_liberado' in b && { b2b_liberado: sim('b2b_liberado') }),
     bloqueado,
     motivo_bloqueio: bloqueado ? texto('motivo_bloqueio', 'Motivo do bloqueio', 200) : null,
     observacoes: texto('observacoes', 'Observações', 65535),

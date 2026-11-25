@@ -9,8 +9,8 @@ import { AvisoErro } from '@/components/AvisoErro';
 import { api, dataBr, docBr, moeda, numDav } from '@/lib/api';
 
 /**
- * Pedidos do CRM: o pedido aprovado no CRM entra no erp-vendas como Requisição Externa (PAF-NFC-e de SC, Requisito XVI).
- * Receber = RE com o CRE + pedido (DAV) com os itens do CRM; com dado inválido, a RE fica denegada.
+ * Pedidos externos: o pedido aprovado no CRM ou fechado no portal B2B entra no erp-vendas como Requisição Externa
+ * (PAF-NFC-e de SC, Requisito XVI). Receber = RE com o CRE + pedido (DAV) com os itens; com dado inválido, a RE fica denegada.
  */
 const STATUS_RE: Record<string, string> = {
   recebida: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
@@ -18,6 +18,7 @@ const STATUS_RE: Record<string, string> = {
   denegada: 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300',
 };
 const cre = (n: unknown) => String(n ?? '').padStart(9, '0');
+const ORIGEM: Record<string, string> = { crm: 'CRM', b2b: 'B2B' };
 
 export default function PedidosCrm() {
   const [ver, setVer] = useState<'pendentes' | 'recebidos'>('pendentes');
@@ -47,10 +48,11 @@ export default function PedidosCrm() {
 
   const confirmar = async () => {
     if (!receber?.natureza_id) throw new Error('Escolha a natureza de operação.');
-    const r = await api(`/api/crm/pedidos/${receber.r.id}/receber`, 'POST', { natureza_id: Number(receber.natureza_id) });
+    const r = await api(`/api/crm/pedidos/${receber.r.id}/receber`, 'POST', { natureza_id: Number(receber.natureza_id), origem: receber.r.origem });
+    const de = `Pedido ${receber.r.numero_pedido} do ${ORIGEM[receber.r.origem]}`;
     setReceber(null);
-    if (r.status === 'denegada') setAviso(`Pedido ${receber.r.numero_pedido} do CRM: RE ${cre(r.cre)} denegada. ${r.motivo}`);
-    else setOk(`Pedido ${receber.r.numero_pedido} do CRM recebido: RE ${cre(r.cre)}, pedido ${numDav(r.dav)}.`);
+    if (r.status === 'denegada') setAviso(`${de}: RE ${cre(r.cre)} denegada. ${r.motivo}`);
+    else setOk(`${de} recebido: RE ${cre(r.cre)}, pedido ${numDav(r.dav)}.`);
     await carregar();
   };
 
@@ -61,8 +63,8 @@ export default function PedidosCrm() {
         id={`crm-pedidos-${ver}`}
         linhas={linhas}
         carregando={carregando}
-        chave={(r) => r.id}
-        vazio={ver === 'pendentes' ? 'Nenhum pedido aprovado no CRM esperando para ser recebido.' : 'Nenhum pedido do CRM recebido ainda.'}
+        chave={(r) => `${r.origem}-${r.id}`}
+        vazio={ver === 'pendentes' ? 'Nenhum pedido do CRM ou do B2B esperando para ser recebido.' : 'Nenhum pedido externo recebido ainda.'}
         barraExtra={
           <select value={ver} onChange={(e) => setVer(e.target.value as any)} className={INPUT_CLASS + ' !w-44'}>
             <option value="pendentes">A receber</option>
@@ -70,7 +72,8 @@ export default function PedidosCrm() {
           </select>
         }
         colunas={[
-          { key: 'numero_pedido', label: 'Pedido CRM', alinhar: 'numero', largura: 100 },
+          { key: 'origem', label: 'Origem', alinhar: 'centro', largura: 80, render: (r) => ORIGEM[r.origem] },
+          { key: 'numero_pedido', label: 'Pedido', alinhar: 'numero', largura: 100 },
           { key: 'data_emissao', label: 'Data', alinhar: 'centro', largura: 100, render: (r) => dataBr(r.data_emissao) },
           { key: 'cliente', label: 'Cliente', largura: 260 },
           { key: 'cpf_cnpj', label: 'CPF/CNPJ', alinhar: 'centro', largura: 150, render: (r) => docBr(r.cpf_cnpj) },
@@ -93,7 +96,7 @@ export default function PedidosCrm() {
       />
       {receber && (
         <ConfirmDialog
-          titulo="Receber pedido do CRM"
+          titulo={`Receber pedido do ${ORIGEM[receber.r.origem]}`}
           mensagem={`Pedido ${receber.r.numero_pedido} de ${receber.r.cliente ?? 'consumidor'} (${moeda(receber.r.valor_total)}). Registra a requisição externa e gera o pedido de venda; com dado inválido, a requisição fica denegada.`}
           confirmar="Receber"
           tom="normal"

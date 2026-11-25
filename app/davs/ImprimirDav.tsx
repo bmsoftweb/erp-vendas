@@ -74,7 +74,7 @@ export default function ImprimirDav() {
             {d.tipo === 'orcamento' && d.validade && <p>Válido até: {dataBr(d.validade)}</p>}
             {d.prevenda_senha && <p className="mt-1">Senha: <b className="text-base font-mono">{d.prevenda_senha}</b></p>}
             {/* Requisição externa: código do pedido em campo específico (Requisito V, I, g) */}
-            {d.origem === 'crm' && d.referencia && <p className="mt-1">Pedido da requisição externa: <b className="font-mono">{d.referencia}</b></p>}
+            {(d.origem === 'crm' || d.origem === 'api') && d.referencia && <p className="mt-1">Pedido da requisição externa: <b className="font-mono">{d.referencia}</b></p>}
           </div>
         </div>
 

@@ -1,10 +1,10 @@
 
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronUp, Eye, EyeOff, Loader2, Menu, Plus, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronUp, Eye, EyeOff, Loader2, Menu, Plus, RectangleHorizontal, Search, X } from 'lucide-react';
 import { INPUT_CLASS } from '@/components/FormCrm';
 import { Toggle } from '@/components/Toggle';
-import { MenuAcoes } from '@/components/MenuAcoes';
+import { ComoBotao, MenuAcoes } from '@/components/MenuAcoes';
 import { NoCanto } from '@/components/AvisoErro';
 import { gravarConfigLista, lerConfigListas } from '@/lib/config-listas-cliente';
 
@@ -35,6 +35,8 @@ interface Prefs {
   visiveis: string[] | null;
   /** Olho da coluna Ações: true = ícones soltos, false = menu "..."; ausente = regra pelo número de ações */
   acoesAbertas?: boolean;
+  /** Ícone à esquerda de "Ações": as ações viram botões com uma palavra (vale sobre o olho) */
+  acoesBotoes?: boolean;
 }
 
 const PADRAO: Prefs = { modo: 'manual', larguras: {}, ordem: [], grade: 'ambas', visiveis: null };
@@ -109,8 +111,9 @@ export function ListaCrm<T>({ id, colunas, linhas: linhasOrigem, chave, ordenave
    */
   const acoesAbertas = !acoesEmMenu || (prefs.acoesAbertas ?? false);
   const alternarAcoes = () => setPrefs((p) => ({ ...p, acoesAbertas: !acoesAbertas }));
-  const emMenu = !acoesAbertas;
-  // Ícones soltos: a coluna cresce até caber todos (com até 4, fica nos 120 px)
+  const botoes = !!prefs.acoesBotoes;
+  const emMenu = !acoesAbertas && !botoes;
+  // Ícones soltos ou botões: a coluna cresce até caber todos (com até 4 ícones, fica nos 120 px)
   const wAcoes = emMenu ? 'w-[120px] min-w-[120px] max-w-[120px]' : 'w-auto min-w-[120px]';
   const arrastada = useRef<string | null>(null);
 
@@ -433,8 +436,12 @@ export function ListaCrm<T>({ id, colunas, linhas: linhasOrigem, chave, ordenave
             ))}
             {sobra && <th className="w-full border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950" />}
             {acoes && <th ref={thAcoes} className={`sticky right-0 z-20 ${wAcoes} px-3 py-2.5 text-center font-semibold text-stone-600 dark:text-stone-300 whitespace-nowrap border-b border-l border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950`}>
+              <button type="button" onClick={() => setPrefs((p) => ({ ...p, acoesBotoes: !botoes }))} title={botoes ? 'Voltar as ações para ícones' : 'Mostrar as ações como botões com nome'}
+                className={`mr-1.5 p-0.5 rounded align-middle cursor-pointer ${botoes ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/40' : 'text-stone-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-950/40'}`}>
+                <RectangleHorizontal className="w-3.5 h-3.5" />
+              </button>
               Ações
-              {acoesEmMenu && (
+              {acoesEmMenu && !botoes && (
                 <button type="button" onClick={alternarAcoes} title={acoesAbertas ? 'Voltar as ações para o menu' : 'Mostrar todas as ações na coluna'} className="ml-1.5 p-0.5 rounded align-middle text-stone-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-950/40 cursor-pointer">
                   {acoesAbertas ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
@@ -473,7 +480,9 @@ export function ListaCrm<T>({ id, colunas, linhas: linhasOrigem, chave, ordenave
                   {sobra && <td className={bB} />}
                   {acoes && (
                     <td className={`sticky right-0 z-[5] ${wAcoes} px-3 py-[7.5px] text-center whitespace-nowrap bg-inherit border-l border-stone-200 dark:border-stone-800 ${bB}`}>
-                      <div className="flex items-center justify-center gap-0.5">{emMenu ? <MenuAcoes>{acoes(l)}</MenuAcoes> : acoes(l)}</div>
+                      <div className={`flex items-center justify-center ${botoes ? 'gap-1' : 'gap-0.5'}`}>
+                        {emMenu ? <MenuAcoes>{acoes(l)}</MenuAcoes> : <ComoBotao.Provider value={botoes}>{acoes(l)}</ComoBotao.Provider>}
+                      </div>
                     </td>
                   )}
                 </tr>

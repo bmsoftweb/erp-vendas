@@ -2,6 +2,16 @@
 
 Mais recente primeiro. PATCH a cada envio ao GitHub; MAJOR/MINOR só quando pedido.
 
+## 0.1.10 — 2026-11-25
+
+- Integração com o erp-financ (FINANC_URL e FINANC_CHAVE_API): venda a prazo consulta o crédito do cliente e é recusada
+  com o motivo (cliente bloqueado, parcela vencida além da carência ou limite insuficiente); nota autorizada vira conta
+  a receber; cancelar a nota é recusado se alguma parcela já foi recebida no financeiro e, se não, cancela o título.
+- Pedidos fechados no portal B2B entram como requisição externa junto com os do CRM (tela "Pedidos do CRM e B2B").
+- Cadastro do cliente: "Liberado no B2B".
+- Coluna Ações: a ação que não vale na linha aparece desativada em cinza no mesmo lugar, e o ícone ao lado de "Ações"
+  mostra as ações como botões com nome.
+
 ## 0.1.9 — 2026-11-24
 
 - Barras de rolagem no tom do tema (no escuro a nativa ficava branca).

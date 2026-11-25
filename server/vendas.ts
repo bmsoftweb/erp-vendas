@@ -8,6 +8,7 @@ import { totais, totalItem } from '../lib/totais.js';
 import { gerarParcelas, somaParcelas, TPAG } from '../lib/parcelas.js';
 import { ehVenda } from '../lib/modelo.js';
 import { documentoValido } from '../lib/documento.js';
+import { conferirCredito } from './financ.js';
 
 /**
  * Vendas (ven_vendas): o faturamento que vira nota. Nasce de pedidos (Faturar pedidos, pode juntar
@@ -69,6 +70,8 @@ async function intermediador(c: PoolConnection, empresa: number, id: unknown, ti
  * "Sem pagamento" (tPag 90); o Faturar grava sem ele, e a emissão recusa até informarem na venda.
  */
 async function gravarParcelas(c: PoolConnection, empresa: number, vendaId: number, parcelas: any[], extras?: any[]) {
+  const [[v]]: any = await c.query('SELECT pessoa_id, data_emissao FROM ven_vendas WHERE id = ?', [vendaId]);
+  await conferirCredito(empresa, v.pessoa_id, String(v.data_emissao).slice(0, 10), parcelas);
   await c.query('DELETE FROM ven_venda_parcelas WHERE venda_id = ?', [vendaId]);
   for (const [n, p] of parcelas.entries()) {
     const e = extras?.[n] ?? {};

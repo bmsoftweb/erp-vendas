@@ -23,7 +23,7 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
     itens: [
       { name: 'Orçamentos', icon: FileText, href: '/orcamentos' },
       { name: 'Pedidos', icon: ClipboardList, href: '/pedidos' },
-      { name: 'Pedidos do CRM', icon: Inbox, href: '/crm-pedidos' },
+      { name: 'Pedidos do CRM e B2B', icon: Inbox, href: '/crm-pedidos' },
       { name: 'Faturar pedidos', icon: Receipt, href: '/faturar' },
       { name: 'Vendas', icon: ShoppingBag, href: '/vendas' },
     ],

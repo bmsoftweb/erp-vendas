@@ -17,7 +17,7 @@ const TELAS: Record<string, { titulo: string; subtitulo: string; semCabecalho?: 
   '/vendas': { titulo: 'Vendas', subtitulo: 'Faturamento: cada venda vira uma nota' },
   '/naturezas': { titulo: 'Naturezas de operação', subtitulo: 'Documento fiscal, finalidade e CFOP de cada tipo de venda' },
   '/pessoas': { titulo: 'Pessoas', subtitulo: 'Clientes, fornecedores e transportadoras do grupo de empresas' },
-  '/crm-pedidos': { titulo: 'Pedidos do CRM', subtitulo: 'Pedidos aprovados no CRM: recebidos como requisição externa, viram pedido de venda' },
+  '/crm-pedidos': { titulo: 'Pedidos do CRM e B2B', subtitulo: 'Pedidos aprovados no CRM ou fechados no portal B2B: recebidos como requisição externa, viram pedido de venda' },
   '/vendedores': { titulo: 'Vendedores', subtitulo: 'Quem vende: aparece nos orçamentos, pedidos e vendas' },
 };
 

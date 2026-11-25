@@ -11,6 +11,7 @@ import { ehVenda } from '../lib/modelo.js';
 import { TPAG } from '../lib/parcelas.js';
 import { baixarEstoque, estornarCancelados } from './estoque.js';
 import { atualizarPedidos } from './vendas.js';
+import { cancelarTitulo, gerarTitulo, podeCancelarTitulo } from './financ.js';
 
 /**
  * Emissão da nota da venda pelos concentradores do erp-nfe (NF-e/NFC-e) e do erp-nfs (NFS-e).
@@ -408,6 +409,7 @@ export async function emitirVenda(vendaId: unknown, empresa: number, uid: number
     );
     await pool.query(`UPDATE ven_vendas SET status = 'faturada', ${app === 'nfe' ? 'nfe_documento_id' : 'nfs_nota_id'} = ? WHERE id = ?`, [nota?.id ?? null, d.v.id]);
     await atenderRe(d.v.id);
+    await gerarTitulo(empresa, d.v.id); // conta a receber no erp-financ; fora do ar, a rodada dele cria depois
     // Baixa do estoque (PAF-NFC-e, registro E2): falhar aqui não desfaz a nota emitida; a nota já baixada não baixa de novo
     if (app === 'nfe' && nota?.id) {
       try {
@@ -546,6 +548,7 @@ export function createNotasRouter() {
     if (!n) falha('Venda faturada com NF-e/NFC-e não encontrada.', 404);
     if (n.situacao === 'contingencia') falha('Esta NFC-e foi emitida em contingência e ainda não foi autorizada. O cancelamento só é possível depois da autorização.');
     if (!['autorizada', 'cancelada'].includes(n.situacao)) falha(`Nota ${n.situacao}: só nota autorizada pode ser cancelada.`);
+    await podeCancelarTitulo(empresa, Number(req.params.id)); // parcela já recebida no financeiro: estorne a baixa lá antes
     let motivo = 'Nota já estava cancelada no erp-nfe';
     if (n.situacao === 'autorizada') {
       if (justificativa.length < 15 || justificativa.length > 255) falha('A justificativa do cancelamento precisa ter de 15 a 255 caracteres.');
@@ -565,6 +568,7 @@ export function createNotasRouter() {
     });
     // Se o estorno falhar aqui, a próxima venda ou o Menu Fiscal do erp-pdv estornam
     await estornarCancelados(empresa).catch((e) => console.error('Estorno do estoque do cancelamento:', e));
+    await cancelarTitulo(empresa, Number(req.params.id), `Venda ${n.numero}: nota cancelada${justificativa ? ` (${justificativa})` : ''}`);
     return { motivo };
   }));
 
